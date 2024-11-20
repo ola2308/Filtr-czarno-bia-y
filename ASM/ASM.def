@@ -1,2 +1,2 @@
 LIBRARY ASM
-EXPORTS MyProc1
+EXPORTS GrayscaleFilter
