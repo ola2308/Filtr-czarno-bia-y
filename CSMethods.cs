@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Filtr_czarno_biały
 {
     internal class CSMethods
     {
-        public static void GrayscaleFilter(byte[] inputBuffer, byte[] outputBuffer, int pixelCount, float brightness = 1.0f)
+        // Metoda do zastosowania filtra czarno-białego z uwzględnieniem jasności
+        public static void GrayscaleFilter(byte[] inputBuffer, byte[] outputBuffer, int pixelCount, float brightness)
         {
-            // Wagi dla przekształcenia RGB na skalę szarości
+            // Wagi dla przekształcenia RGB na skalę szarości, z uwzględnieniem jasności
             float weightR = 0.299f * brightness;
             float weightG = 0.587f * brightness;
             float weightB = 0.114f * brightness;
@@ -18,23 +16,26 @@ namespace Filtr_czarno_biały
             Parallel.For(0, pixelCount, i =>
             {
                 int offset = i * 3;
-                byte r = inputBuffer[offset + 2];
-                byte g = inputBuffer[offset + 1];
+
+                // Pobieramy wartości RGB
                 byte b = inputBuffer[offset];
+                byte g = inputBuffer[offset + 1];
+                byte r = inputBuffer[offset + 2];
 
-                // Oblicz wartość szarości
-                float gray = r * weightR + g * weightG + b * weightB;
+                // Obliczanie wartości szarości
+                float grayValue = r * weightR + g * weightG + b * weightB;
 
-                // Upewnij się, że wartość mieści się w przedziale [0, 255]
-                byte grayByte = (byte)Clamp((int)gray, 0, 255);
+                // Upewniamy się, że wartość mieści się w zakresie [0, 255]
+                byte gray = (byte)Clamp((int)grayValue, 0, 255);
 
-                // Zapisz wartość szarości do wszystkich trzech kanałów (RGB)
-                outputBuffer[offset] = grayByte;
-                outputBuffer[offset + 1] = grayByte;
-                outputBuffer[offset + 2] = grayByte;
+                // Przypisujemy wartość szarości do wszystkich kanałów RGB
+                outputBuffer[offset] = gray;
+                outputBuffer[offset + 1] = gray;
+                outputBuffer[offset + 2] = gray;
             });
         }
 
+        // Metoda pomocnicza do zapewnienia, że wartość jest w zakresie [min, max]
         private static int Clamp(int value, int min, int max)
         {
             if (value < min) return min;

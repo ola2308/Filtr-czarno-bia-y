@@ -4,6 +4,27 @@ using System.Linq;
 
 namespace Filtr_czarno_biały
 {
+    public class ProcessingDetails
+    {
+        public int PixelsPerThread { get; set; }
+        public int RemainingPixels { get; set; }
+        public int TotalThreads { get; set; }
+        public float AverageTimePerPixel { get; set; }
+        public float PixelsPerMillisecond { get; set; }
+        public float ThreadEfficiency { get; set; }
+        public float Speedup { get; set; }
+
+        public override string ToString()
+        {
+            return $"Pikseli na wątek: {PixelsPerThread}\n" +
+                   $"Pozostałe piksele: {RemainingPixels}\n" +
+                   $"Liczba wątków: {TotalThreads}\n" +
+                   $"Średni czas na piksel: {AverageTimePerPixel:F6} ms\n" +
+                   $"Wydajność: {PixelsPerMillisecond:F2} pikseli/ms\n" +
+                   $"Efektywność wątków: {ThreadEfficiency:P2}\n" +
+                   $"Przyspieszenie: {Speedup:F2}x";
+        }
+    }
     public class ProcessingResult
     {
         // Podstawowe właściwości
@@ -12,11 +33,6 @@ namespace Filtr_czarno_biały
         public byte[] OutputBuffer { get; set; }
         public ProcessingDetails ProcessingDetails { get; set; }
 
-        // Właściwości dla wersji C#
-        public long CsAverageExecutionTime { get; set; }
-        public long CsMinExecutionTime { get; set; }
-        public long CsMaxExecutionTime { get; set; }
-
         // Konstruktor domyślny
         public ProcessingResult()
         {
@@ -24,26 +40,20 @@ namespace Filtr_czarno_biały
         }
 
         // Konstruktor z parametrami
-        public ProcessingResult(long executionTime, int threadCount, byte[] outputBuffer, ProcessingDetails details = null, long csAverageExecutionTime = 0, long csMinExecutionTime = 0, long csMaxExecutionTime = 0)
+        public ProcessingResult(long executionTime, int threadCount, byte[] outputBuffer, ProcessingDetails details = null)
         {
             ExecutionTime = executionTime;
             ThreadCount = threadCount;
             OutputBuffer = outputBuffer;
             ProcessingDetails = details ?? new ProcessingDetails();
-            CsAverageExecutionTime = csAverageExecutionTime;
-            CsMinExecutionTime = csMinExecutionTime;
-            CsMaxExecutionTime = csMaxExecutionTime;
         }
 
         // Metoda do generowania podsumowania wyników
         public string GetSummary()
         {
             return $"Wyniki przetwarzania:\n" +
-                   $"Czas wykonania ASM: {ExecutionTime}ms\n" +
+                   $"Czas wykonania: {ExecutionTime}ms\n" +
                    $"Liczba wątków: {ThreadCount}\n" +
-                   $"Średni czas wykonania C#: {CsAverageExecutionTime}ms\n" +
-                   $"Minimalny czas wykonania C#: {CsMinExecutionTime}ms\n" +
-                   $"Maksymalny czas wykonania C#: {CsMaxExecutionTime}ms\n" +
                    $"Rozmiar bufora: {OutputBuffer?.Length ?? 0} bajtów\n\n" +
                    $"Szczegóły wydajności:\n{ProcessingDetails}";
         }
@@ -74,9 +84,6 @@ namespace Filtr_czarno_biały
                 return null;
 
             var avgTime = (long)resultsList.Average(r => r.ExecutionTime);
-            var csAverageTime = (long)resultsList.Average(r => r.CsAverageExecutionTime);
-            var csMinTime = resultsList.Min(r => r.CsMinExecutionTime);
-            var csMaxTime = resultsList.Max(r => r.CsMaxExecutionTime);
             var threadCount = resultsList.First().ThreadCount;
             var lastBuffer = resultsList.Last().OutputBuffer;
 
@@ -91,7 +98,7 @@ namespace Filtr_czarno_biały
                 Speedup = resultsList.Average(r => r.ProcessingDetails.Speedup)
             };
 
-            return new ProcessingResult(avgTime, threadCount, lastBuffer, details, csAverageTime, csMinTime, csMaxTime);
+            return new ProcessingResult(avgTime, threadCount, lastBuffer, details);
         }
 
         // Metoda do walidacji wyników
@@ -121,10 +128,7 @@ namespace Filtr_czarno_biały
                     PixelsPerMillisecond = this.ProcessingDetails.PixelsPerMillisecond,
                     ThreadEfficiency = this.ProcessingDetails.ThreadEfficiency,
                     Speedup = this.ProcessingDetails.Speedup
-                },
-                CsAverageExecutionTime = this.CsAverageExecutionTime,
-                CsMinExecutionTime = this.CsMinExecutionTime,
-                CsMaxExecutionTime = this.CsMaxExecutionTime
+                }
             };
         }
     }
