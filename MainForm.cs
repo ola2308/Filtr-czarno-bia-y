@@ -135,8 +135,8 @@ namespace Filtr_czarno_biały
 
                 var results = new StringBuilder();
                 results.AppendLine("Wyniki testów wydajności:");
-                results.AppendLine("Liczba wątków | Średni czas (ms) | Min czas (ms) | Max czas (ms) | Przyspieszenie | Efektywność");
-                results.AppendLine("----------------------------------------------------------------------------------------");
+                results.AppendLine("Liczba wątków | Średni czas ASM (ms) | Min czas ASM (ms) | Max czas ASM (ms) | Przyspieszenie | Efektywność | Średni czas C# (ms) | Min czas C# (ms) | Max czas C# (ms)");
+                results.AppendLine("-----------------------------------------------------------------------------------------------------------");
 
                 float brightness = (brightnessTrackBar.Value + 100) / 200f;
 
@@ -158,9 +158,19 @@ namespace Filtr_czarno_biały
                     ThreadCount = 1
                 });
 
+                // Test dla C#
+                List<long> csBaselineTimes = new List<long>();
+                for (int i = 0; i < 3; i++)
+                {
+                    csBaselineTimes.Add(ProcessImageCS(1, brightness));
+                }
+                double csBaselineAvgTime = csBaselineTimes.Average();
+                long csBaselineMinTime = csBaselineTimes.Min();
+                long csBaselineMaxTime = csBaselineTimes.Max();
+
                 results.AppendLine(
                     $"{1,12} | {baselineTime,14:F2} | {baselineResults.Min(r => r.ExecutionTime),11} | " +
-                    $"{baselineResults.Max(r => r.ExecutionTime),11} | 1.00x | 100,00%");
+                    $"{baselineResults.Max(r => r.ExecutionTime),11} | 1.00x | 100,00% | {csBaselineAvgTime:F2} | {csBaselineMinTime} | {csBaselineMaxTime}");
 
                 // Następnie dla pozostałych liczby wątków
                 foreach (int threadCount in threadCounts.Skip(1)) // Pomijamy 1, bo już mamy
@@ -184,9 +194,19 @@ namespace Filtr_czarno_biały
                     double speedup = baselineTime / avgTime;
                     double efficiency = speedup / threadCount;
 
+                    // Test dla C#
+                    List<long> csTimes = new List<long>();
+                    for (int i = 0; i < 3; i++)
+                    {
+                        csTimes.Add(ProcessImageCS(threadCount, brightness));
+                    }
+                    double csAvgTime = csTimes.Average();
+                    long csMinTime = csTimes.Min();
+                    long csMaxTime = csTimes.Max();
+
                     results.AppendLine(
                         $"{threadCount,12} | {avgTime,14:F2} | {minTime,11} | {maxTime,11} | " +
-                        $"{speedup,13:F2}x | {efficiency,10:P2}");
+                        $"{speedup,13:F2}x | {efficiency,10:P2} | {csAvgTime:F2} | {csMinTime} | {csMaxTime}");
 
                     // Zachowaj najlepszy wynik dla tej liczby wątków
                     benchmarkResults.Add(threadResults.OrderBy(r => r.ExecutionTime).First());
@@ -204,6 +224,25 @@ namespace Filtr_czarno_biały
             }
         }
 
+        private long ProcessImageCS(int threadCount, float brightness)
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
+            // Oblicz ile pikseli przypadnie na jeden wątek
+            int pixelsPerThread = pixelCount / threadCount;
+            int remainingPixels = pixelCount % threadCount;
+
+            // Przygotuj bufory dla każdego wątków
+            byte[] testBuffer = new byte[inputBuffer.Length];
+            Array.Copy(inputBuffer, testBuffer, inputBuffer.Length);
+            byte[] csOutputBuffer = new byte[inputBuffer.Length];
+
+            // Przetwarzanie przy użyciu C#
+            CSMethods.GrayscaleFilter(testBuffer, csOutputBuffer, pixelCount, brightness);
+
+            watch.Stop();
+            return watch.ElapsedMilliseconds;
+        }
 
         private void SaveButton_Click(object sender, EventArgs e)
         {
@@ -241,6 +280,7 @@ namespace Filtr_czarno_biały
                 }
             }
         }
+
         private byte[] GetImageBuffer(Bitmap image)
         {
             int width = image.Width;
@@ -375,103 +415,110 @@ namespace Filtr_czarno_biały
             }
         }
         private void ShowResults(string results)
+{
+    var resultForm = new Form
+    {
+        Text = "Wyniki testów wydajności",
+        Size = new Size(800, 600),
+        StartPosition = FormStartPosition.CenterParent
+    };
+
+    var mainLayout = new TableLayoutPanel
+    {
+        Dock = DockStyle.Fill,
+        ColumnCount = 1,
+        RowCount = 2,
+        Padding = new Padding(10)
+    };
+    mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 70));
+    mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 30));
+
+    var formattedResults = new StringBuilder();
+    formattedResults.AppendLine("Wyniki testów wydajności:");
+    formattedResults.AppendLine("Liczba wątków | Średni czas ASM (ms) | Min czas ASM (ms) | Max czas ASM (ms) | Przyspieszenie | Efektywność | Średni czas C# (ms) | Min czas C# (ms) | Max czas C# (ms)");
+    formattedResults.AppendLine(new string('-', 125));
+    formattedResults.AppendLine(results);
+
+    var resultTextBox = new System.Windows.Forms.TextBox
+    {
+        Multiline = true,
+        ReadOnly = true,
+        Dock = DockStyle.Fill,
+        Font = new Font("Consolas", 10),
+        Text = formattedResults.ToString() + "\n\nSzczegółowa analiza:\n" +
+               $"Rozmiar obrazu: {originalImage.Width}x{originalImage.Height} pikseli\n" +
+               $"Całkowita liczba pikseli: {pixelCount}\n" +
+               $"Rozmiar danych: {inputBuffer.Length} bajtów\n\n" +
+               "Legenda:\n" +
+               "- Przyspieszenie: stosunek czasu wykonania dla 1 wątku do czasu dla N wątków\n" +
+               "- Efektywność: przyspieszenie podzielone przez liczbę wątków\n" +
+               "- Średni czas: średnia z 3 prób dla każdej konfiguracji\n" +
+               "- Min/Max czas: najlepszy i najgorszy wynik z prób\n"
+    };
+
+    var buttonPanel = new TableLayoutPanel
+    {
+        Dock = DockStyle.Fill,
+        ColumnCount = 2,
+        RowCount = 1,
+        Padding = new Padding(0, 10, 0, 0)
+    };
+    buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+    buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+
+    var saveResultsButton = new System.Windows.Forms.Button
+    {
+        Text = "Zapisz wyniki do pliku",
+        Dock = DockStyle.Fill,
+        Margin = new Padding(5)
+    };
+
+    var saveImageButton = new System.Windows.Forms.Button
+    {
+        Text = "Zapisz przetworzony obraz",
+        Dock = DockStyle.Fill,
+        Margin = new Padding(5)
+    };
+
+    saveResultsButton.Click += (s, e) =>
+    {
+        using (SaveFileDialog saveDialog = new SaveFileDialog())
         {
-            var resultForm = new Form
+            saveDialog.Filter = "Text file|*.txt";
+            saveDialog.Title = "Zapisz wyniki testów";
+            if (saveDialog.ShowDialog() == DialogResult.OK)
             {
-                Text = "Wyniki testów wydajności",
-                Size = new Size(800, 600),
-                StartPosition = FormStartPosition.CenterParent
-            };
-
-            var mainLayout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-                Padding = new Padding(10)
-            };
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 70));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 30));
-
-            var resultTextBox = new System.Windows.Forms.TextBox
-            {
-                Multiline = true,
-                ReadOnly = true,
-                Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 10),
-                Text = results + "\n\nSzczegółowa analiza:\n" +
-                       $"Rozmiar obrazu: {originalImage.Width}x{originalImage.Height} pikseli\n" +
-                       $"Całkowita liczba pikseli: {pixelCount}\n" +
-                       $"Rozmiar danych: {inputBuffer.Length} bajtów\n\n" +
-                       "Legenda:\n" +
-                       "- Przyspieszenie: stosunek czasu wykonania dla 1 wątku do czasu dla N wątków\n" +
-                       "- Efektywność: przyspieszenie podzielone przez liczbę wątków\n" +
-                       "- Średni czas: średnia z 3 prób dla każdej konfiguracji\n" +
-                       "- Min/Max czas: najlepszy i najgorszy wynik z prób\n"
-            };
-
-            var buttonPanel = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1,
-                Padding = new Padding(0, 10, 0, 0)
-            };
-            buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-
-            var saveResultsButton = new System.Windows.Forms.Button
-            {
-                Text = "Zapisz wyniki do pliku",
-                Dock = DockStyle.Fill,
-                Margin = new Padding(5)
-            };
-
-            var saveImageButton = new System.Windows.Forms.Button
-            {
-                Text = "Zapisz przetworzony obraz",
-                Dock = DockStyle.Fill,
-                Margin = new Padding(5)
-            };
-
-            saveResultsButton.Click += (s, e) =>
-            {
-                using (SaveFileDialog saveDialog = new SaveFileDialog())
+                try
                 {
-                    saveDialog.Filter = "Text file|*.txt";
-                    saveDialog.Title = "Zapisz wyniki testów";
-                    if (saveDialog.ShowDialog() == DialogResult.OK)
-                    {
-                        try
-                        {
-                            File.WriteAllText(saveDialog.FileName, resultTextBox.Text);
-                            MessageBox.Show("Wyniki zostały zapisane pomyślnie!",
-                                          "Sukces",
-                                          MessageBoxButtons.OK,
-                                          MessageBoxIcon.Information);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Błąd podczas zapisywania wyników: {ex.Message}",
-                                          "Błąd",
-                                          MessageBoxButtons.OK,
-                                          MessageBoxIcon.Error);
-                        }
-                    }
+                    File.WriteAllText(saveDialog.FileName, resultTextBox.Text);
+                    MessageBox.Show("Wyniki zostały zapisane pomyślnie!",
+                                  "Sukces",
+                                  MessageBoxButtons.OK,
+                                  MessageBoxIcon.Information);
                 }
-            };
-
-            saveImageButton.Click += SaveButton_Click;
-
-            buttonPanel.Controls.Add(saveResultsButton, 0, 0);
-            buttonPanel.Controls.Add(saveImageButton, 1, 0);
-
-            mainLayout.Controls.Add(resultTextBox, 0, 0);
-            mainLayout.Controls.Add(buttonPanel, 0, 1);
-
-            resultForm.Controls.Add(mainLayout);
-            resultForm.ShowDialog();
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Błąd podczas zapisywania wyników: {ex.Message}",
+                                  "Błąd",
+                                  MessageBoxButtons.OK,
+                                  MessageBoxIcon.Error);
+                }
+            }
         }
+    };
+
+    saveImageButton.Click += SaveButton_Click;
+
+    buttonPanel.Controls.Add(saveResultsButton, 0, 0);
+    buttonPanel.Controls.Add(saveImageButton, 1, 0);
+
+    mainLayout.Controls.Add(resultTextBox, 0, 0);
+    mainLayout.Controls.Add(buttonPanel, 0, 1);
+
+    resultForm.Controls.Add(mainLayout);
+    resultForm.ShowDialog();
+}
+
 
         private void SetControlsEnabled(bool enabled)
         {
