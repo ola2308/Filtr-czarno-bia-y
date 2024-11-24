@@ -9,15 +9,8 @@ namespace Filtr_czarno_biały
 {
     partial class MainForm
     {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -27,12 +20,6 @@ namespace Filtr_czarno_biały
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
-
-        /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
@@ -73,11 +60,11 @@ namespace Filtr_czarno_biały
             System.Windows.Forms.TableLayoutPanel controlPanel = new System.Windows.Forms.TableLayoutPanel();
             controlPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             controlPanel.ColumnCount = 1;
-            controlPanel.RowCount = 10;
+            controlPanel.RowCount = 11;  // Zwiększone dla GroupBox wyboru biblioteki
             controlPanel.Padding = new System.Windows.Forms.Padding(5);
 
             // Ustawienie równych odstępów między kontrolkami w panelu kontrolnym
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 11; i++)
             {
                 controlPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
             }
@@ -89,6 +76,43 @@ namespace Filtr_czarno_biały
             loadButton.Height = 40;
             loadButton.Margin = new Padding(3, 3, 3, 10);
             loadButton.Click += new System.EventHandler(this.LoadButton_Click);
+
+            // W InitializeComponent()
+
+            // W metodzie InitializeComponent():
+
+            // GroupBox wyboru biblioteki
+            this.libraryGroupBox = new System.Windows.Forms.GroupBox();
+            this.asmRadioButton = new System.Windows.Forms.RadioButton();
+            this.csRadioButton = new System.Windows.Forms.RadioButton();
+
+            // Konfiguracja GroupBox
+            this.libraryGroupBox.Text = "Wybór biblioteki";
+            this.libraryGroupBox.Size = new Size(200, 70);
+            this.libraryGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.libraryGroupBox.Margin = new Padding(3, 3, 3, 10);
+            this.libraryGroupBox.Height = 70;
+
+            // Konfiguracja RadioButtons
+            this.asmRadioButton.Text = "ASM x64";
+            this.asmRadioButton.Location = new Point(10, 20);
+            this.asmRadioButton.Size = new Size(150, 20);
+            this.asmRadioButton.Checked = true;
+
+            this.csRadioButton.Text = "C#";
+            this.csRadioButton.Location = new Point(10, 40);
+            this.csRadioButton.Size = new Size(150, 20);
+
+            // Dodanie RadioButtons do GroupBox
+            this.libraryGroupBox.Controls.Add(this.csRadioButton);
+            this.libraryGroupBox.Controls.Add(this.asmRadioButton);
+
+            // A przy dodawaniu do controlPanel:
+            controlPanel.Controls.Add(loadButton, 0, 0);
+            controlPanel.Controls.Add(this.libraryGroupBox, 0, 1);
+
+            // Modyfikacja rozmiaru wiersza dla GroupBox w controlPanel
+            controlPanel.RowStyles[1] = new RowStyle(SizeType.Absolute, 80F);
 
             // Label liczby wątków
             System.Windows.Forms.Label threadLabel = new System.Windows.Forms.Label();
@@ -110,11 +134,11 @@ namespace Filtr_czarno_biały
 
             // TrackBar jasności
             this.brightnessTrackBar = new System.Windows.Forms.TrackBar();
-            this.brightnessTrackBar.Minimum = -100;
-            this.brightnessTrackBar.Maximum = 100;
+            this.brightnessTrackBar.Minimum = -50;
+            this.brightnessTrackBar.Maximum = 50;
             this.brightnessTrackBar.Value = 0;
             this.brightnessTrackBar.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.brightnessTrackBar.TickFrequency = 10;
+            this.brightnessTrackBar.TickFrequency = 25;
             this.brightnessTrackBar.TickStyle = System.Windows.Forms.TickStyle.Both;
             this.brightnessTrackBar.Margin = new Padding(3, 3, 3, 10);
             this.brightnessTrackBar.ValueChanged += new System.EventHandler(this.BrightnessTrackBar_ValueChanged);
@@ -161,25 +185,24 @@ namespace Filtr_czarno_biały
             this.imagePanel.Controls.Add(this.originalPictureBox, 0, 0);
             this.imagePanel.Controls.Add(this.processedPictureBox, 1, 0);
 
-            // Dodawanie kontrolek do panelu kontrolnego w określonej kolejności
+            // Dodawanie kontrolek do panelu kontrolnego
             controlPanel.Controls.Add(loadButton, 0, 0);
-            controlPanel.Controls.Add(threadLabel, 0, 1);
-            controlPanel.Controls.Add(this.threadsComboBox, 0, 2);
-            controlPanel.Controls.Add(brightnessLabel, 0, 3);
-            controlPanel.Controls.Add(this.brightnessTrackBar, 0, 4);
-            controlPanel.Controls.Add(this.processButton, 0, 5);
-            controlPanel.Controls.Add(this.saveButton, 0, 6);
-            controlPanel.Controls.Add(this.progressBar, 0, 7);
-            controlPanel.Controls.Add(this.executionTimeLabel, 0, 8);
-            controlPanel.Controls.Add(this.statusLabel, 0, 9);
+            controlPanel.Controls.Add(this.libraryGroupBox, 0, 1);
+            controlPanel.Controls.Add(threadLabel, 0, 2);
+            controlPanel.Controls.Add(this.threadsComboBox, 0, 3);
+            controlPanel.Controls.Add(brightnessLabel, 0, 4);
+            controlPanel.Controls.Add(this.brightnessTrackBar, 0, 5);
+            controlPanel.Controls.Add(this.processButton, 0, 6);
+            controlPanel.Controls.Add(this.saveButton, 0, 7);
+            controlPanel.Controls.Add(this.progressBar, 0, 8);
+            controlPanel.Controls.Add(this.executionTimeLabel, 0, 9);
+            controlPanel.Controls.Add(this.statusLabel, 0, 10);
 
             mainLayout.Controls.Add(this.imagePanel, 0, 0);
             mainLayout.Controls.Add(controlPanel, 1, 0);
 
             this.Controls.Add(mainLayout);
         }
-
-        #endregion
 
         private System.Windows.Forms.TableLayoutPanel imagePanel;
         private System.Windows.Forms.PictureBox originalPictureBox;
@@ -191,5 +214,8 @@ namespace Filtr_czarno_biały
         private System.Windows.Forms.Button saveButton;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Label statusLabel;
+        private System.Windows.Forms.GroupBox libraryGroupBox;
+        private System.Windows.Forms.RadioButton asmRadioButton;
+        private System.Windows.Forms.RadioButton csRadioButton;
     }
 }

@@ -17,6 +17,7 @@ using PictureBox = System.Windows.Forms.PictureBox;
 using TrackBar = System.Windows.Forms.TrackBar;
 using ProgressBar = System.Windows.Forms.ProgressBar;
 using ComboBox = System.Windows.Forms.ComboBox;
+using BibliotekaCS1;
 
 namespace Filtr_czarno_biały
 {
@@ -39,6 +40,10 @@ namespace Filtr_czarno_biały
             uiHandler.InitializeThreadComboBox(threadsComboBox, DEFAULT_THREAD_COUNT);
             benchmarkResults = new List<ProcessingResult>();
             imageProcessor = new ImageProcessor();
+
+            // Handlery dla RadioButtons
+            asmRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
+            csRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
         }
 
         private async void LoadButton_Click(object sender, EventArgs e)
@@ -68,15 +73,23 @@ namespace Filtr_czarno_biały
                     catch (Exception ex)
                     {
                         MessageBox.Show($"Błąd podczas wczytywania obrazu: {ex.Message}",
-                                        "Błąd",
-                                        MessageBoxButtons.OK,
-                                        MessageBoxIcon.Error);
+                                      "Błąd",
+                                      MessageBoxButtons.OK,
+                                      MessageBoxIcon.Error);
                     }
                 }
             }
         }
 
         private void BrightnessTrackBar_ValueChanged(object sender, EventArgs e)
+        {
+            if (originalImage != null)
+            {
+                ProcessImageAsync().ConfigureAwait(false);
+            }
+        }
+
+        private void LibraryRadioButton_CheckedChanged(object sender, EventArgs e)
         {
             if (originalImage != null)
             {
@@ -180,16 +193,28 @@ namespace Filtr_czarno_biały
             {
                 saveDialog.Filter = "PNG Image|*.png|JPEG Image|*.jpg|Bitmap Image|*.bmp";
                 saveDialog.Title = "Zapisz przetworzony obraz";
+                saveDialog.DefaultExt = "png";
 
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
                     try
                     {
-                        using (var ms = new MemoryStream())
+                        string extension = Path.GetExtension(saveDialog.FileName).ToLower();
+                        ImageFormat format = ImageFormat.Png;
+
+                        switch (extension)
                         {
-                            processedImage.Save(ms, processedImage.RawFormat);
-                            FileHandler.SaveFile(saveDialog.FileName, ms.ToArray());
+                            case ".jpg":
+                            case ".jpeg":
+                                format = ImageFormat.Jpeg;
+                                break;
+                            case ".bmp":
+                                format = ImageFormat.Bmp;
+                                break;
                         }
+
+                        processedImage.Save(saveDialog.FileName, format);
+
                         MessageBox.Show("Obraz został zapisany pomyślnie!",
                                         "Sukces",
                                         MessageBoxButtons.OK,
@@ -222,13 +247,13 @@ namespace Filtr_czarno_biały
             try
             {
                 int stride = bmpData.Stride;
-                byte[] row = new byte[stride];
-                IntPtr scan0 = bmpData.Scan0;
+                IntPtr ptr = bmpData.Scan0;
 
                 for (int y = 0; y < height; y++)
                 {
-                    Marshal.Copy(scan0 + y * stride, row, 0, stride);
-                    Buffer.BlockCopy(row, 0, buffer, y * width * bytesPerPixel, width * bytesPerPixel);
+                    int sourceOffset = y * stride;
+                    int destOffset = y * width * bytesPerPixel;
+                    Marshal.Copy(ptr + sourceOffset, buffer, destOffset, width * bytesPerPixel);
                 }
 
                 return buffer;
@@ -246,13 +271,43 @@ namespace Filtr_czarno_biały
             try
             {
                 int threadCount = int.Parse(threadsComboBox.SelectedItem.ToString());
-                float brightness = (brightnessTrackBar.Value + 100) / 200f;
+                float brightness = (brightnessTrackBar.Value + 50) / 175f + 0.7f;
 
-                var result = await imageProcessor.ProcessImageWithParamsAsync(inputBuffer, threadCount, brightness, pixelCount);
+                ProcessingResult result;
+                if (asmRadioButton.Checked)
+                {
+                    result = await imageProcessor.ProcessImageWithParamsAsync(
+                        inputBuffer,
+                        threadCount,
+                        brightness,
+                        pixelCount,
+                        true);
+                }
+                else
+                {
+                    // Użyj biblioteki C#
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    byte[] outputBuffer = new byte[inputBuffer.Length];
+                    CSLibrary.GrayscaleFilter(inputBuffer, outputBuffer, pixelCount, brightness);
+                    watch.Stop();
+
+                    result = new ProcessingResult
+                    {
+                        ExecutionTime = watch.ElapsedMilliseconds,
+                        ThreadCount = threadCount,
+                        OutputBuffer = outputBuffer,
+                        ProcessingDetails = new ProcessingDetails
+                        {
+                            PixelsPerThread = pixelCount,
+                            TotalThreads = 1
+                        }
+                    };
+                }
 
                 processedImage = CreateBitmapFromBuffer(result.OutputBuffer, originalImage.Width, originalImage.Height);
                 processedPictureBox.Image = processedImage;
-                executionTimeLabel.Text = $"Czas wykonania: {result.ExecutionTime}ms\nWydajność: {result.ProcessingDetails.PixelsPerMillisecond:F2} pikseli/ms";
+                executionTimeLabel.Text = $"Czas wykonania: {result.ExecutionTime}ms\n" +
+                                        $"Wydajność: {result.ProcessingDetails.PixelsPerMillisecond:F2} pikseli/ms";
             }
             catch (Exception ex)
             {
@@ -284,13 +339,13 @@ namespace Filtr_czarno_biały
             try
             {
                 int stride = bmpData.Stride;
-                byte[] row = new byte[stride];
-                IntPtr scan0 = bmpData.Scan0;
+                IntPtr ptr = bmpData.Scan0;
 
                 for (int y = 0; y < height; y++)
                 {
-                    Buffer.BlockCopy(buffer, y * width * 3, row, 0, width * 3);
-                    Marshal.Copy(row, 0, scan0 + y * stride, stride);
+                    int sourceOffset = y * width * 3;
+                    int destOffset = y * stride;
+                    Marshal.Copy(buffer, sourceOffset, ptr + destOffset, width * 3);
                 }
 
                 return bitmap;
