@@ -72,7 +72,6 @@ namespace Filtr_czarno_biały
                                         MessageBoxButtons.OK,
                                         MessageBoxIcon.Error);
                     }
-
                 }
             }
         }
@@ -106,41 +105,13 @@ namespace Filtr_czarno_biały
                 progressBar.Value = 0;
 
                 var results = new StringBuilder();
+                results.AppendLine("Wyniki testów wydajności:");
+                results.AppendLine("Liczba wątków | Średni czas ASM (ms) | Min czas ASM (ms) | Max ASM (ms) | Średni czas C# (ms) | Min czas C# (ms) | Max czas C# (ms)");
+                results.AppendLine(new string('-', 120));
 
                 float brightness = (brightnessTrackBar.Value + 100) / 200f;
 
-                // Przetwarzanie dla 1 wątku jako bazowy wynik
-                List<ProcessingResult> baselineResults = new List<ProcessingResult>();
-                List<long> csBaselineTimes = new List<long>();
-                for (int i = 0; i < 3; i++)
-                {
-                    statusLabel.Text = $"Status: Test {currentTest + 1}/{totalTests} (wątki: 1)";
-                    var result = await imageProcessor.ProcessImageWithParamsAsync(inputBuffer, 1, brightness, pixelCount);
-                    baselineResults.Add(result);
-
-                    // Dodaj przetwarzanie C# dla 1 wątku
-                    long csTime = imageProcessor.ProcessImageCS(inputBuffer, pixelCount, 1, brightness);
-                    csBaselineTimes.Add(csTime);
-
-                    currentTest++;
-                    progressBar.Value = currentTest;
-                    Application.DoEvents();
-                }
-                double baselineTime = baselineResults.Average(r => r.ExecutionTime);
-                double csBaselineAvgTime = csBaselineTimes.Average();
-                long csBaselineMinTime = csBaselineTimes.Min();
-                long csBaselineMaxTime = csBaselineTimes.Max();
-
-                benchmarkResults.Add(new ProcessingResult
-                {
-                    ExecutionTime = (long)baselineTime,
-                    ThreadCount = 1
-                });
-
-                results.AppendLine($"{1,12} | {baselineTime,14:F2} | {baselineResults.Min(r => r.ExecutionTime),11} | {baselineResults.Max(r => r.ExecutionTime),11} | 1.00x | 100,00% | {csBaselineAvgTime:F2} | {csBaselineMinTime} | {csBaselineMaxTime}");
-
-                // Przetwarzanie dla pozostałych liczb wątków
-                foreach (int threadCount in threadCounts.Skip(1))
+                foreach (int threadCount in threadCounts)
                 {
                     List<ProcessingResult> threadResults = new List<ProcessingResult>();
                     List<long> csTimes = new List<long>();
@@ -151,7 +122,6 @@ namespace Filtr_czarno_biały
                         var result = await imageProcessor.ProcessImageWithParamsAsync(inputBuffer, threadCount, brightness, pixelCount);
                         threadResults.Add(result);
 
-                        // Dodaj przetwarzanie C# dla każdej liczby wątków
                         long csTime = imageProcessor.ProcessImageCS(inputBuffer, pixelCount, threadCount, brightness);
                         csTimes.Add(csTime);
 
@@ -161,16 +131,24 @@ namespace Filtr_czarno_biały
                     }
 
                     double avgTime = threadResults.Average(r => r.ExecutionTime);
-                    long minTime = threadResults.Min(r => r.ExecutionTime);
-                    long maxTime = threadResults.Max(r => r.ExecutionTime);
-                    double speedup = baselineTime / avgTime;
-                    double efficiency = speedup / threadCount;
+                    double minTime = threadResults.Min(r => r.ExecutionTime);
+                    double maxTime = threadResults.Max(r => r.ExecutionTime);
 
                     double csAvgTime = csTimes.Average();
                     long csMinTime = csTimes.Min();
                     long csMaxTime = csTimes.Max();
 
-                    results.AppendLine($"{threadCount,12} | {avgTime,14:F2} | {minTime,11} | {maxTime,11} | {speedup,13:F2}x | {efficiency,10:P2} | {csAvgTime:F2} | {csMinTime} | {csMaxTime}");
+                    results.AppendFormat("{0,12} | {1,18:F3} | {2,15:F3} | {3,15:F3} | {4,17:F3} | {5,14:F3} | {6,14:F3}",
+                        threadCount,
+                        avgTime,
+                        minTime,
+                        maxTime,
+                        csAvgTime,
+                        csMinTime,
+                        csMaxTime);
+
+                    results.AppendLine();
+                    results.AppendLine(new string('-', 120));
 
                     benchmarkResults.Add(threadResults.OrderBy(r => r.ExecutionTime).First());
                 }
@@ -186,7 +164,6 @@ namespace Filtr_czarno_biały
                 SetControlsEnabled(true);
             }
         }
-
 
         public void SaveButton_Click(object sender, EventArgs e)
         {
