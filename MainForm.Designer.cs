@@ -135,7 +135,7 @@ namespace Filtr_czarno_biały
             // TrackBar jasności
             this.brightnessTrackBar = new System.Windows.Forms.TrackBar();
             this.brightnessTrackBar.Minimum = -50;
-            this.brightnessTrackBar.Maximum = 50;
+            this.brightnessTrackBar.Maximum = 100;
             this.brightnessTrackBar.Value = 0;
             this.brightnessTrackBar.Dock = System.Windows.Forms.DockStyle.Fill;
             this.brightnessTrackBar.TickFrequency = 25;

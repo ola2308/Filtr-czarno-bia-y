@@ -41,7 +41,6 @@ namespace Filtr_czarno_biały
             benchmarkResults = new List<ProcessingResult>();
             imageProcessor = new ImageProcessor();
 
-            // Handlery dla RadioButtons
             asmRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
             csRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
         }
@@ -111,7 +110,7 @@ namespace Filtr_czarno_biały
                 benchmarkResults.Clear();
 
                 int[] threadCounts = { 1, 2, 4, 8, 16, 32, 64 };
-                int totalTests = threadCounts.Length * 3;
+                int totalTests = threadCounts.Length * 5;
                 int currentTest = 0;
 
                 progressBar.Maximum = totalTests;
@@ -119,7 +118,7 @@ namespace Filtr_czarno_biały
 
                 var results = new StringBuilder();
                 results.AppendLine("Wyniki testów wydajności:");
-                results.AppendLine("Liczba wątków | Średni czas ASM (ms) | Min czas ASM (ms) | Max ASM (ms) | Średni czas C# (ms) | Min czas C# (ms) | Max czas C# (ms)");
+                results.AppendLine("Liczba wątków | Średni czas ASM (ms) | Min czas ASM (ms) | Max czas ASM (ms) | Średni czas C# (ms) | Min czas C# (ms) | Max czas C# (ms)");
                 results.AppendLine(new string('-', 120));
 
                 float brightness = (brightnessTrackBar.Value + 100) / 200f;
@@ -129,12 +128,20 @@ namespace Filtr_czarno_biały
                     List<ProcessingResult> threadResults = new List<ProcessingResult>();
                     List<long> csTimes = new List<long>();
 
-                    for (int i = 0; i < 3; i++)
+                    for (int i = 0; i < 5; i++)
                     {
                         statusLabel.Text = $"Status: Test {currentTest + 1}/{totalTests} (wątki: {threadCount})";
-                        var result = await imageProcessor.ProcessImageWithParamsAsync(inputBuffer, threadCount, brightness, pixelCount);
+
+                        // Test ASM
+                        var result = await imageProcessor.ProcessImageWithParamsAsync(
+                            inputBuffer,
+                            threadCount,
+                            brightness,
+                            pixelCount,
+                            true);
                         threadResults.Add(result);
 
+                        // Test C#
                         long csTime = imageProcessor.ProcessImageCS(inputBuffer, pixelCount, threadCount, brightness);
                         csTimes.Add(csTime);
 
@@ -159,9 +166,7 @@ namespace Filtr_czarno_biały
                         csAvgTime,
                         csMinTime,
                         csMaxTime);
-
                     results.AppendLine();
-                    results.AppendLine(new string('-', 120));
 
                     benchmarkResults.Add(threadResults.OrderBy(r => r.ExecutionTime).First());
                 }
@@ -235,7 +240,7 @@ namespace Filtr_czarno_biały
         {
             int width = image.Width;
             int height = image.Height;
-            int bytesPerPixel = 3; // Format24bppRgb = 3 bytes per pixel
+            int bytesPerPixel = 3;
             int bufferSize = width * height * bytesPerPixel;
             byte[] buffer = new byte[bufferSize];
 
@@ -247,15 +252,11 @@ namespace Filtr_czarno_biały
             try
             {
                 int stride = bmpData.Stride;
-                IntPtr ptr = bmpData.Scan0;
-
                 for (int y = 0; y < height; y++)
                 {
-                    int sourceOffset = y * stride;
-                    int destOffset = y * width * bytesPerPixel;
-                    Marshal.Copy(ptr + sourceOffset, buffer, destOffset, width * bytesPerPixel);
+                    IntPtr scan0 = bmpData.Scan0 + (y * stride);
+                    Marshal.Copy(scan0, buffer, y * width * bytesPerPixel, width * bytesPerPixel);
                 }
-
                 return buffer;
             }
             finally
@@ -271,7 +272,7 @@ namespace Filtr_czarno_biały
             try
             {
                 int threadCount = int.Parse(threadsComboBox.SelectedItem.ToString());
-                float brightness = (brightnessTrackBar.Value + 50) / 175f + 0.7f;
+                float brightness = (brightnessTrackBar.Value + 100) / 200f;
 
                 ProcessingResult result;
                 if (asmRadioButton.Checked)
@@ -285,7 +286,6 @@ namespace Filtr_czarno_biały
                 }
                 else
                 {
-                    // Użyj biblioteki C#
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     byte[] outputBuffer = new byte[inputBuffer.Length];
                     CSLibrary.GrayscaleFilter(inputBuffer, outputBuffer, pixelCount, brightness);
@@ -294,12 +294,13 @@ namespace Filtr_czarno_biały
                     result = new ProcessingResult
                     {
                         ExecutionTime = watch.ElapsedMilliseconds,
-                        ThreadCount = threadCount,
+                        ThreadCount = 1,
                         OutputBuffer = outputBuffer,
                         ProcessingDetails = new ProcessingDetails
                         {
                             PixelsPerThread = pixelCount,
-                            TotalThreads = 1
+                            TotalThreads = 1,
+                            PixelsPerMillisecond = pixelCount / (float)watch.ElapsedMilliseconds
                         }
                     };
                 }
@@ -339,15 +340,11 @@ namespace Filtr_czarno_biały
             try
             {
                 int stride = bmpData.Stride;
-                IntPtr ptr = bmpData.Scan0;
-
                 for (int y = 0; y < height; y++)
                 {
-                    int sourceOffset = y * width * 3;
-                    int destOffset = y * stride;
-                    Marshal.Copy(buffer, sourceOffset, ptr + destOffset, width * 3);
+                    IntPtr scan0 = bmpData.Scan0 + (y * stride);
+                    Marshal.Copy(buffer, y * width * 3, scan0, width * 3);
                 }
-
                 return bitmap;
             }
             finally

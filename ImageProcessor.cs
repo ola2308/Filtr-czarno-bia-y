@@ -9,52 +9,75 @@ namespace Filtr_czarno_biały
     public class ImageProcessor
     {
         public async Task<ProcessingResult> ProcessImageWithParamsAsync(
-            byte[] inputBuffer,
-            int threadCount,
-            float brightness,
-            int pixelCount,
-            bool useASM = true)  // Dodany parametr wyboru biblioteki
+    byte[] inputBuffer,
+    int threadCount,
+    float brightness,
+    int pixelCount,
+    bool useASM = true)
         {
             return await Task.Run(() =>
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
+
+                // Upewnij się, że liczba pikseli na wątek jest wielokrotnością 4
+                int pixelsPerThread = pixelCount / threadCount;
+                pixelsPerThread = (pixelsPerThread + 3) & ~3; // Zaokrąglij w górę do wielokrotności 4
+
                 byte[] outputBuffer = new byte[inputBuffer.Length];
+                var tasks = new Task[threadCount];
 
-                if (useASM)
+                for (int i = 0; i < threadCount; i++)
                 {
-                    // Logika dla ASM
-                    int pixelsPerThread = pixelCount / threadCount;
-                    var tasks = new Task[threadCount];
+                    int threadIndex = i;
+                    int startPixel = threadIndex * pixelsPerThread;
 
-                    for (int i = 0; i < threadCount; i++)
+                    // Oblicz faktyczną liczbę pikseli dla tego wątku
+                    int pixelsToProcess;
+                    if (threadIndex == threadCount - 1)
                     {
-                        int threadIndex = i;
-                        int startPixel = threadIndex * pixelsPerThread;
-                        int currentPixels = (threadIndex == threadCount - 1)
-                            ? pixelCount - startPixel
-                            : pixelsPerThread;
-
-                        tasks[i] = Task.Run(() =>
-                        {
-                            int startOffset = startPixel * 3;
-                            int length = currentPixels * 3;
-                            byte[] threadInput = new byte[length];
-                            byte[] threadOutput = new byte[length];
-
-                            Buffer.BlockCopy(inputBuffer, startOffset, threadInput, 0, length);
-                            NativeMethods.GrayscaleFilter(threadInput, threadOutput, currentPixels, brightness);
-                            Buffer.BlockCopy(threadOutput, 0, outputBuffer, startOffset, length);
-                        });
+                        // Ostatni wątek bierze wszystkie pozostałe piksele
+                        pixelsToProcess = pixelCount - startPixel;
+                        // Zaokrąglij w górę do wielokrotności 4
+                        pixelsToProcess = (pixelsToProcess + 3) & ~3;
+                    }
+                    else
+                    {
+                        pixelsToProcess = pixelsPerThread;
                     }
 
-                    Task.WaitAll(tasks);
-                }
-                else
-                {
-                    // Logika dla C#
-                    CSLibrary.GrayscaleFilter(inputBuffer, outputBuffer, pixelCount, brightness);
+                    // Sprawdź czy nie wyjdziemy poza bufor
+                    if (startPixel + pixelsToProcess > pixelCount)
+                    {
+                        pixelsToProcess = pixelCount - startPixel;
+                    }
+
+                    tasks[i] = Task.Run(() =>
+                    {
+                        int startOffset = startPixel * 3;
+                        int length = pixelsToProcess * 3;
+
+                        // Stwórz bufory tymczasowe z wyrównaniem
+                        byte[] threadInput = new byte[length];
+                        byte[] threadOutput = new byte[length];
+
+                        // Skopiuj dane do przetworzenia
+                        Buffer.BlockCopy(inputBuffer, startOffset, threadInput, 0, length);
+
+                        if (useASM)
+                        {
+                            NativeMethods.GrayscaleFilter(threadInput, threadOutput, pixelsToProcess, brightness);
+                        }
+                        else
+                        {
+                            CSLibrary.GrayscaleFilter(threadInput, threadOutput, pixelsToProcess, brightness);
+                        }
+
+                        // Skopiuj wyniki
+                        Buffer.BlockCopy(threadOutput, 0, outputBuffer, startOffset, length);
+                    });
                 }
 
+                Task.WaitAll(tasks);
                 watch.Stop();
 
                 return new ProcessingResult
@@ -64,7 +87,7 @@ namespace Filtr_czarno_biały
                     OutputBuffer = outputBuffer,
                     ProcessingDetails = new ProcessingDetails
                     {
-                        PixelsPerThread = pixelCount / threadCount,
+                        PixelsPerThread = pixelsPerThread,
                         TotalThreads = threadCount,
                         PixelsPerMillisecond = pixelCount / (float)watch.ElapsedMilliseconds
                     }
