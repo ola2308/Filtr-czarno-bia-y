@@ -18,16 +18,36 @@ namespace Filtr_czarno_biały
 
         public void InitializeThreadComboBox(ComboBox threadsComboBox, int defaultThreadCount)
         {
-            int[] threadOptions = { 1, 2, 4, 8, 16, 32, 64 };
-            threadsComboBox.Items.AddRange(Array.ConvertAll(threadOptions, x => x.ToString()));
-            threadsComboBox.SelectedItem = defaultThreadCount.ToString();
+            if (threadsComboBox == null)
+                return;
+
+            try
+            {
+                int[] threadOptions = { 1, 2, 4, 8, 16, 32, 64 };
+                threadsComboBox.Items.Clear();
+                foreach (int option in threadOptions)
+                {
+                    threadsComboBox.Items.Add(option.ToString());
+                }
+                threadsComboBox.SelectedItem = defaultThreadCount.ToString();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Błąd podczas inicjalizacji ComboBox: {ex.Message}",
+                              "Błąd",
+                              MessageBoxButtons.OK,
+                              MessageBoxIcon.Warning);
+            }
         }
 
         public void SetControlsEnabled(Control[] controls, bool enabled)
         {
             foreach (var control in controls)
             {
-                control.Enabled = enabled;
+                if (control != null && !control.IsDisposed)
+                {
+                    control.Enabled = enabled;
+                }
             }
         }
 
@@ -154,17 +174,27 @@ namespace Filtr_czarno_biały
 
             try
             {
-                stats.AppendLine($"\nInformacje o obrazie:");
+                // Informacje o obrazie
+                stats.AppendLine("\nInformacje o obrazie:");
                 stats.AppendLine($"Rozmiar: {originalImage.Width}x{originalImage.Height} pikseli");
-                stats.AppendLine($"Liczba pikseli: {pixelCount}");
+                stats.AppendLine($"Liczba pikseli: {pixelCount:N0}");
                 stats.AppendLine($"Format: {originalImage.PixelFormat}");
+                stats.AppendLine($"Rozdzielczość: {originalImage.HorizontalResolution:F0}x{originalImage.VerticalResolution:F0} DPI");
+
+                // Analiza wyników wydajności
+                if (!string.IsNullOrEmpty(results))
+                {
+                    stats.AppendLine("\nPodsumowanie wydajności:");
+                    // Tu można dodać analizę wyników z parametru results
+                    // np. średnie czasy, przyspieszenie, etc.
+                }
+
+                return stats.ToString();
             }
             catch (Exception ex)
             {
                 return $"Błąd podczas generowania statystyk: {ex.Message}";
             }
-
-            return stats.ToString();
         }
 
         private double ParseDoubleWithFallback(string value)

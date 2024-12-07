@@ -1,5 +1,5 @@
-﻿using Filtr_czarno_biały;
-using System;
+﻿using System;
+using System.IO;
 using System.Windows.Forms;
 
 namespace Filtr_czarno_biały
@@ -17,10 +17,13 @@ namespace Filtr_czarno_biały
             }
             catch (Exception ex)
             {
+                // Logowanie błędu do pliku tekstowego
+                File.WriteAllText("error_log.txt", $"Błąd: {ex.Message}\n{ex.StackTrace}");
+                // Wyświetlenie komunikatu o błędzie
                 MessageBox.Show($"Krytyczny błąd aplikacji: {ex.Message}",
-                              "Błąd",
-                              MessageBoxButtons.OK,
-                              MessageBoxIcon.Error);
+                                "Błąd",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
             }
         }
     }

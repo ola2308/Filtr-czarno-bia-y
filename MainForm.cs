@@ -8,15 +8,6 @@ using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Button = System.Windows.Forms.Button;
-using TextBox = System.Windows.Forms.TextBox;
-using Form = System.Windows.Forms.Form;
-using TableLayoutPanel = System.Windows.Forms.TableLayoutPanel;
-using Label = System.Windows.Forms.Label;
-using PictureBox = System.Windows.Forms.PictureBox;
-using TrackBar = System.Windows.Forms.TrackBar;
-using ProgressBar = System.Windows.Forms.ProgressBar;
-using ComboBox = System.Windows.Forms.ComboBox;
 using BibliotekaCS1;
 
 namespace Filtr_czarno_biały
@@ -32,17 +23,89 @@ namespace Filtr_czarno_biały
         private ProcessingResult baselineResult;
         private readonly UIHandler uiHandler;
         private readonly ImageProcessor imageProcessor;
+        private Panel splashPanel;
+        private System.Windows.Forms.Timer splashTimer;
 
         public MainForm()
         {
             InitializeComponent();
+            ShowSplashScreen();
+            
+            // Inicjalizacja
             uiHandler = new UIHandler(this);
-            uiHandler.InitializeThreadComboBox(threadsComboBox, DEFAULT_THREAD_COUNT);
             benchmarkResults = new List<ProcessingResult>();
             imageProcessor = new ImageProcessor();
+            
+            // Inicjalizacja ComboBox
+            uiHandler.InitializeThreadComboBox(threadsComboBox, DEFAULT_THREAD_COUNT);
 
+            // Event handlery
             asmRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
             csRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
+        }
+
+        private void ShowSplashScreen()
+        {
+            try
+            {
+                mainLayout.Visible = false;
+
+                splashPanel = new Panel
+                {
+                    Dock = DockStyle.None,
+                    BackColor = Color.White,
+                    Size = new Size(640, 631),
+                    Location = new Point(
+                        (this.ClientSize.Width - 640) / 2,
+                        (this.ClientSize.Height - 631) / 2
+                    )
+                };
+
+                var splashImage = new PictureBox
+                {
+                    Size = new Size(640, 631),
+                    Image = Image.FromFile("splash_image.png"),
+                    SizeMode = PictureBoxSizeMode.StretchImage
+                };
+
+                splashPanel.Controls.Add(splashImage);
+                this.Controls.Add(splashPanel);
+                splashPanel.BringToFront();
+
+                splashTimer = new System.Windows.Forms.Timer
+                {
+                    Interval = 3000
+                };
+
+                splashTimer.Tick += (s, e) =>
+                {
+                    splashTimer.Stop();
+                    if (splashPanel != null && !splashPanel.IsDisposed)
+                    {
+                        foreach (Control control in splashPanel.Controls)
+                        {
+                            if (control is PictureBox pb && pb.Image != null)
+                            {
+                                pb.Image.Dispose();
+                                pb.Image = null;
+                            }
+                            control.Dispose();
+                        }
+                        splashPanel.Dispose();
+                    }
+                    mainLayout.Visible = true;
+                };
+
+                splashTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Błąd podczas ładowania splash screena: {ex.Message}",
+                              "Błąd",
+                              MessageBoxButtons.OK,
+                              MessageBoxIcon.Error);
+                mainLayout.Visible = true;
+            }
         }
 
         private async void LoadButton_Click(object sender, EventArgs e)
