@@ -69,14 +69,5 @@ namespace Filtr_czarno_biały.Properties {
                 return ((System.Drawing.Icon)(obj));
             }
         }
-        
-        /// <summary>
-        /// Wyszukuje zlokalizowany ciąg podobny do ciągu .
-        /// </summary>
-        internal static string AppIcon {
-            get {
-                return ResourceManager.GetString("AppIcon", resourceCulture);
-            }
-        }
     }
 }

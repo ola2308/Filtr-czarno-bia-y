@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Windows.Forms;
+using System.IO;
 
 namespace Filtr_czarno_biały
 {
@@ -10,7 +9,6 @@ namespace Filtr_czarno_biały
     {
         private System.ComponentModel.IContainer components = null;
 
-        // Deklaracje kontrolek
         private TableLayoutPanel mainLayout;
         private TableLayoutPanel imagePanel;
         private PictureBox originalPictureBox;
@@ -29,6 +27,7 @@ namespace Filtr_czarno_biały
         private ProgressBar progressBar;
         private Label executionTimeLabel;
         private Label statusLabel;
+        private Label dragDropLabel;
 
         protected override void Dispose(bool disposing)
         {
@@ -43,37 +42,17 @@ namespace Filtr_czarno_biały
         {
             try
             {
-                // Inicjalizacja komponentów
                 components = new System.ComponentModel.Container();
-
-                // Wczytanie ikon
-                string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                Bitmap loadIcon = null;
-                Bitmap processIcon = null;
-                Bitmap saveIcon = null;
-
-                try
-                {
-                    using (var tempBmp = new Bitmap(Path.Combine(baseDirectory, "load_icon.png")))
-                        loadIcon = new Bitmap(tempBmp);
-                    using (var tempBmp = new Bitmap(Path.Combine(baseDirectory, "process_icon.png")))
-                        processIcon = new Bitmap(tempBmp);
-                    using (var tempBmp = new Bitmap(Path.Combine(baseDirectory, "save_icon.png")))
-                        saveIcon = new Bitmap(tempBmp);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Nie można załadować ikon: {ex.Message}",
-                                   "Ostrzeżenie",
-                                   MessageBoxButtons.OK,
-                                   MessageBoxIcon.Warning);
-                }
 
                 // Ustawienia formularza
                 this.Text = "Filtr czarno-biały";
                 this.Size = new System.Drawing.Size(1200, 800);
                 this.StartPosition = FormStartPosition.CenterScreen;
-                this.Icon = Properties.Resources.app_icon;
+                try
+                {
+                    this.Icon = new Icon("app_icon.ico");
+                }
+                catch { }
 
                 // Główny układ
                 mainLayout = new TableLayoutPanel
@@ -81,7 +60,8 @@ namespace Filtr_czarno_biały
                     Dock = DockStyle.Fill,
                     ColumnCount = 2,
                     RowCount = 1,
-                    Padding = new Padding(10)
+                    Padding = new Padding(10),
+                    BackColor = Color.WhiteSmoke
                 };
                 mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75F));
                 mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
@@ -92,7 +72,8 @@ namespace Filtr_czarno_biały
                     Dock = DockStyle.Fill,
                     ColumnCount = 2,
                     RowCount = 1,
-                    Padding = new Padding(5)
+                    Padding = new Padding(5),
+                    BackColor = Color.White
                 };
                 imagePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
                 imagePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
@@ -102,15 +83,30 @@ namespace Filtr_czarno_biały
                 {
                     Dock = DockStyle.Fill,
                     SizeMode = PictureBoxSizeMode.Zoom,
-                    BorderStyle = BorderStyle.FixedSingle
+                    BorderStyle = BorderStyle.FixedSingle,
+                    BackColor = Color.White,
+                    AllowDrop = true
                 };
+
+                // Label dla drag & drop
+                dragDropLabel = new Label
+                {
+                    Text = "Przeciągnij zdjęcie tutaj",
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    BackColor = Color.Transparent,
+                    Font = new Font("Segoe UI", 12F, FontStyle.Regular),
+                    AutoSize = false
+                };
+                originalPictureBox.Controls.Add(dragDropLabel);
 
                 // PictureBox dla przetworzonego obrazu
                 processedPictureBox = new PictureBox
                 {
                     Dock = DockStyle.Fill,
                     SizeMode = PictureBoxSizeMode.Zoom,
-                    BorderStyle = BorderStyle.FixedSingle
+                    BorderStyle = BorderStyle.FixedSingle,
+                    BackColor = Color.White
                 };
 
                 // Panel kontrolny
@@ -119,7 +115,8 @@ namespace Filtr_czarno_biały
                     Dock = DockStyle.Fill,
                     ColumnCount = 1,
                     RowCount = 11,
-                    Padding = new Padding(5)
+                    Padding = new Padding(5),
+                    BackColor = Color.White
                 };
 
                 for (int i = 0; i < 11; i++)
@@ -132,14 +129,13 @@ namespace Filtr_czarno_biały
                 loadButton = new Button
                 {
                     Text = "Wczytaj obraz",
-                    Image = loadIcon,
                     Dock = DockStyle.Fill,
                     Height = 40,
                     Padding = new Padding(10, 0, 0, 0),
                     Margin = new Padding(3, 3, 3, 10),
-                    ImageAlign = ContentAlignment.MiddleLeft,
-                    TextAlign = ContentAlignment.MiddleRight,
-                    TextImageRelation = TextImageRelation.ImageBeforeText
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                    UseVisualStyleBackColor = true
                 };
                 loadButton.Click += new EventHandler(LoadButton_Click);
 
@@ -148,7 +144,9 @@ namespace Filtr_czarno_biały
                 {
                     Text = "Wybór biblioteki",
                     Dock = DockStyle.Fill,
-                    Margin = new Padding(3, 3, 3, 10)
+                    Margin = new Padding(3, 3, 3, 10),
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                    BackColor = Color.White
                 };
 
                 // RadioButton dla ASM
@@ -157,7 +155,8 @@ namespace Filtr_czarno_biały
                     Text = "ASM x64",
                     Location = new Point(10, 20),
                     Size = new Size(150, 20),
-                    Checked = true
+                    Checked = true,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
                 asmRadioButton.CheckedChanged += new EventHandler(LibraryRadioButton_CheckedChanged);
 
@@ -166,7 +165,8 @@ namespace Filtr_czarno_biały
                 {
                     Text = "C#",
                     Location = new Point(10, 40),
-                    Size = new Size(150, 20)
+                    Size = new Size(150, 20),
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
                 csRadioButton.CheckedChanged += new EventHandler(LibraryRadioButton_CheckedChanged);
 
@@ -178,7 +178,8 @@ namespace Filtr_czarno_biały
                 {
                     Text = "Liczba wątków:",
                     Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
 
                 // ComboBox wątków
@@ -186,7 +187,8 @@ namespace Filtr_czarno_biały
                 {
                     Dock = DockStyle.Fill,
                     DropDownStyle = ComboBoxStyle.DropDownList,
-                    Margin = new Padding(3, 3, 3, 10)
+                    Margin = new Padding(3, 3, 3, 10),
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
 
                 // Etykieta jasności
@@ -194,7 +196,8 @@ namespace Filtr_czarno_biały
                 {
                     Text = "Jasność:",
                     Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
 
                 // TrackBar jasności
@@ -214,15 +217,14 @@ namespace Filtr_czarno_biały
                 processButton = new Button
                 {
                     Text = "Wykonaj testy wydajności",
-                    Image = processIcon,
                     Dock = DockStyle.Fill,
                     Height = 40,
                     Padding = new Padding(10, 0, 0, 0),
                     Margin = new Padding(3, 3, 3, 10),
                     Enabled = false,
-                    ImageAlign = ContentAlignment.MiddleLeft,
-                    TextAlign = ContentAlignment.MiddleRight,
-                    TextImageRelation = TextImageRelation.ImageBeforeText
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                    UseVisualStyleBackColor = true
                 };
                 processButton.Click += new EventHandler(ProcessButton_Click);
 
@@ -230,15 +232,14 @@ namespace Filtr_czarno_biały
                 saveButton = new Button
                 {
                     Text = "Zapisz obraz",
-                    Image = saveIcon,
                     Dock = DockStyle.Fill,
                     Height = 40,
                     Padding = new Padding(10, 0, 0, 0),
                     Margin = new Padding(3, 3, 3, 10),
                     Enabled = false,
-                    ImageAlign = ContentAlignment.MiddleLeft,
-                    TextAlign = ContentAlignment.MiddleRight,
-                    TextImageRelation = TextImageRelation.ImageBeforeText
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                    UseVisualStyleBackColor = true
                 };
                 saveButton.Click += new EventHandler(SaveButton_Click);
 
@@ -257,7 +258,8 @@ namespace Filtr_czarno_biały
                     Text = "Czas wykonania: -",
                     Dock = DockStyle.Fill,
                     TextAlign = ContentAlignment.MiddleLeft,
-                    Margin = new Padding(3, 3, 3, 5)
+                    Margin = new Padding(3, 3, 3, 5),
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
 
                 // Etykieta statusu
@@ -265,7 +267,8 @@ namespace Filtr_czarno_biały
                 {
                     Text = "Status: Gotowy",
                     Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
 
                 // Dodawanie kontrolek do paneli

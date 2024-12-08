@@ -25,23 +25,67 @@ namespace Filtr_czarno_biały
         private readonly ImageProcessor imageProcessor;
         private Panel splashPanel;
         private System.Windows.Forms.Timer splashTimer;
+        private Label dragLabel;
 
         public MainForm()
         {
             InitializeComponent();
             ShowSplashScreen();
-            
-            // Inicjalizacja
+
             uiHandler = new UIHandler(this);
             benchmarkResults = new List<ProcessingResult>();
             imageProcessor = new ImageProcessor();
-            
-            // Inicjalizacja ComboBox
+
+            InitializeDropLabel();
+            InitializeDragDrop();
             uiHandler.InitializeThreadComboBox(threadsComboBox, DEFAULT_THREAD_COUNT);
 
-            // Event handlery
             asmRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
             csRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
+        }
+
+        private void InitializeDropLabel()
+        {
+            dragLabel = new Label
+            {
+                Text = "Przeciągnij zdjęcie tutaj",
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Font = new Font("Segoe UI", 12F, FontStyle.Regular)
+            };
+            originalPictureBox.Controls.Add(dragLabel);
+        }
+
+        private void InitializeDragDrop()
+        {
+            originalPictureBox.AllowDrop = true;
+            originalPictureBox.DragEnter += (s, e) =>
+            {
+                if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                    e.Effect = DragDropEffects.Copy;
+            };
+
+            originalPictureBox.DragDrop += async (s, e) =>
+            {
+                try
+                {
+                    string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                    if (files != null && files.Length > 0)
+                    {
+                        await LoadImageFile(files[0]);
+                        dragLabel.Visible = false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Błąd podczas wczytywania obrazu: {ex.Message}",
+                                  "Błąd",
+                                  MessageBoxButtons.OK,
+                                  MessageBoxIcon.Error);
+                }
+            };
         }
 
         private void ShowSplashScreen()
@@ -52,23 +96,28 @@ namespace Filtr_czarno_biały
 
                 splashPanel = new Panel
                 {
-                    Dock = DockStyle.None,
-                    BackColor = Color.White,
-                    Size = new Size(640, 631),
-                    Location = new Point(
-                        (this.ClientSize.Width - 640) / 2,
-                        (this.ClientSize.Height - 631) / 2
-                    )
+                    Dock = DockStyle.Fill,
+                    BackColor = Color.White
                 };
 
-                var splashImage = new PictureBox
+                try
                 {
-                    Size = new Size(640, 631),
-                    Image = Image.FromFile("splash_image.png"),
-                    SizeMode = PictureBoxSizeMode.StretchImage
-                };
+                    using (var stream = new MemoryStream(File.ReadAllBytes("splash_image.png")))
+                    {
+                        var splashImage = new PictureBox
+                        {
+                            Dock = DockStyle.Fill,
+                            Image = new Bitmap(stream),
+                            SizeMode = PictureBoxSizeMode.Zoom
+                        };
+                        splashPanel.Controls.Add(splashImage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Nie można załadować splash screena: {ex.Message}");
+                }
 
-                splashPanel.Controls.Add(splashImage);
                 this.Controls.Add(splashPanel);
                 splashPanel.BringToFront();
 
@@ -121,6 +170,7 @@ namespace Filtr_czarno_biały
                         using (var ms = new MemoryStream(fileData))
                         {
                             originalImage = new Bitmap(ms);
+
                         }
                         originalPictureBox.Image = originalImage;
 
@@ -140,6 +190,47 @@ namespace Filtr_czarno_biały
                                       MessageBoxIcon.Error);
                     }
                 }
+            }
+        }
+
+        private async Task LoadImageFile(string filePath)
+        {
+            try
+            {
+                // Pierwsze wczytaj obraz
+                byte[] fileData = FileHandler.LoadFile(filePath);
+                using (var ms = new MemoryStream(fileData))
+                {
+                    originalImage = new Bitmap(ms);
+                }
+                originalPictureBox.Image = originalImage;
+
+                // Ukryj napis drag & drop
+                if (originalPictureBox.Controls.Count > 0)
+                {
+                    foreach (Control control in originalPictureBox.Controls)
+                    {
+                        if (control is Label)
+                        {
+                            control.Visible = false;
+                        }
+                    }
+                }
+
+                pixelCount = originalImage.Width * originalImage.Height;
+                inputBuffer = GetImageBuffer(originalImage);
+
+                statusLabel.Text = $"Status: Obraz wczytany ({originalImage.Width}x{originalImage.Height})";
+                SetControlsEnabled(true);
+
+                await ProcessImageAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Błąd podczas wczytywania obrazu: {ex.Message}",
+                              "Błąd",
+                              MessageBoxButtons.OK,
+                              MessageBoxIcon.Error);
             }
         }
 

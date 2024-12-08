@@ -135,16 +135,15 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app_icon.ico">
+    <Content Include="app_icon.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Content>
     <Content Include="load_icon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="process_icon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\LoadIcon.bmp" />
     <Content Include="save_icon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
