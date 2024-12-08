@@ -170,7 +170,6 @@ namespace Filtr_czarno_biały
                         using (var ms = new MemoryStream(fileData))
                         {
                             originalImage = new Bitmap(ms);
-
                         }
                         originalPictureBox.Image = originalImage;
 
@@ -179,6 +178,8 @@ namespace Filtr_czarno_biały
 
                         statusLabel.Text = $"Status: Obraz wczytany ({originalImage.Width}x{originalImage.Height})";
                         SetControlsEnabled(true);
+
+                        dragDropLabel.Visible = false;
 
                         await ProcessImageAsync();
                     }
@@ -197,7 +198,6 @@ namespace Filtr_czarno_biały
         {
             try
             {
-                // Pierwsze wczytaj obraz
                 byte[] fileData = FileHandler.LoadFile(filePath);
                 using (var ms = new MemoryStream(fileData))
                 {
@@ -205,23 +205,17 @@ namespace Filtr_czarno_biały
                 }
                 originalPictureBox.Image = originalImage;
 
-                // Ukryj napis drag & drop
-                if (originalPictureBox.Controls.Count > 0)
-                {
-                    foreach (Control control in originalPictureBox.Controls)
-                    {
-                        if (control is Label)
-                        {
-                            control.Visible = false;
-                        }
-                    }
-                }
-
                 pixelCount = originalImage.Width * originalImage.Height;
                 inputBuffer = GetImageBuffer(originalImage);
 
                 statusLabel.Text = $"Status: Obraz wczytany ({originalImage.Width}x{originalImage.Height})";
                 SetControlsEnabled(true);
+
+                // Ukryj napis po wczytaniu obrazu
+                if (dragDropLabel != null && !dragDropLabel.IsDisposed)
+                {
+                    dragDropLabel.Visible = false;
+                }
 
                 await ProcessImageAsync();
             }
