@@ -10,14 +10,15 @@
 GrayscaleFilter PROC
     ;==========================================
     ; Parametry wejœciowe (konwencja MS x64):
-    ; rcx - wskaŸnik do inputBuffer
-    ; rdx - wskaŸnik do outputBuffer
+    ; rcx - wskaŸnik gdzie jest obraz
+    ; rdx - wskaŸnik gdzie zapisaæ obraz
     ; r8d - pixelCount
     ; xmm3 - jasnoœæ
     ;==========================================
+
     ;robimy porz¹dek w pamiêci
     push rbp ; zapisujemy gdzie teraz jesteœmy, ¿eby póŸniej umieæ wróciæ
-    mov rbp, rsp ; mówimy "tu bêd¹ nasze nowe rzeczy"
+    mov rbp, rsp ; tu bêd¹ nasze nowe rzeczy
     push rsi  ; zapisujemy gdzie mamy obrazek Ÿród³owy
     push rdi ; zapisujemy gdzie bêdziemy dawaæ nowy obrazek
     push rbx ; zapisujemy jeszcze jedno miejsce na ró¿ne rzeczy
@@ -47,7 +48,7 @@ GrayscaleFilter PROC
     
     ;ile grup po 4 piksele musimy zrobiæ
     mov ecx, ebx    ; bierzemy liczbê wszystkich pikseli
-    shr ecx, 2      ; dzielimy przez 4 bo bêdziemy robiæ po 4 na raz           
+    shr ecx, 2      ; dzielimy przez 4 bo bêdziemy robiæ po 4 na raz, zwi¹zane z SHR(Shift Right) - przesuniêcie bitowe w prawo. przesuwamy bit o 2 pozycje w prawo czyli dzielimy przez 4           
     test ecx, ecx   ; sprawdzamy czy w ogóle jest co robiæ
     jz process_remaining  ; jak nie ma co robiæ po 4, to robimy pojedynczo
 
@@ -64,7 +65,7 @@ process_pixels:
     punpcklbw xmm2, xmm15   ; to samo dla drugiego piksela
     punpcklbw xmm10, xmm15  ; i dla trzeciego
 
-    Robimy jeszcze wiêksze liczby(rozszerzamy do 32 bajtów)
+    ;robimy jeszcze wiêksze liczby(rozszerzamy do 32 bajtów)
     punpcklwd xmm1, xmm15         
     punpcklwd xmm2, xmm15
     punpcklwd xmm10, xmm15
@@ -75,9 +76,9 @@ process_pixels:
     cvtdq2ps xmm10, xmm10      ; dla wszystkich pikseli
     
     ; Liczymy jak szary ma byæ ka¿dy piksel
-    mulps xmm1, xmm4   ; mno¿ymy przez nasze magiczne liczby           
-    mulps xmm2, xmm5    ; ka¿dy kolor osobno
-    mulps xmm10, xmm6    ; i jeszcze raz
+    mulps xmm1, xmm4   ; mno¿ymy przez nasze liczby           
+    mulps xmm2, xmm5  
+    mulps xmm10, xmm6   
     
     ; sk³adamy wszystko do kupy
     addps xmm1, xmm2   ; dodajemy wszystkie kolory razem          
@@ -143,9 +144,9 @@ remaining_loop:
     addss xmm1, xmm2
     
     ; poprawiamy nasz¹ liczbê ¿eby by³a ³adna
-    addss xmm1, xmm9    ; Dodajemy liczbê do zaokr¹glania
-    maxss xmm1, xmm8    ; Pilnujemy ¿eby nie by³o za ciemno
-    minss xmm1, xmm7    ; Pilnujemy ¿eby nie by³o za jasno
+    addss xmm1, xmm9    ; dodajemy liczbê do zaokr¹glania
+    maxss xmm1, xmm8    ; pilnujemy ¿eby nie by³o za ciemno
+    minss xmm1, xmm7    ; pilnujemy ¿eby nie by³o za jasno
     
     ;zamieniamy na zwyk³¹ liczbê i zapisujemy
     cvtss2si eax, xmm1

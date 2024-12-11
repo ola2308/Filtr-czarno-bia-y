@@ -31,19 +31,23 @@ namespace Filtr_czarno_biały
         {
             InitializeComponent();
             ShowSplashScreen();
+            InitializeDragDrop();
 
             uiHandler = new UIHandler(this);
             benchmarkResults = new List<ProcessingResult>();
             imageProcessor = new ImageProcessor();
 
-            InitializeDropLabel();
-            InitializeDragDrop();
-            uiHandler.InitializeThreadComboBox(threadsComboBox, DEFAULT_THREAD_COUNT);
+            // Zamiast stałej DEFAULT_THREAD_COUNT używamy wykrytej liczby procesorów
+            uiHandler.InitializeThreadComboBox(threadsComboBox, GetDefaultThreadCount());
 
             asmRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
             csRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
         }
 
+        private int GetDefaultThreadCount()
+        {
+            return Environment.ProcessorCount; // Automatycznie wykrywa liczbę procesorów logicznych
+        }
         private void InitializeDropLabel()
         {
             dragLabel = new Label
@@ -71,6 +75,7 @@ namespace Filtr_czarno_biały
             {
                 try
                 {
+                    InitializeDropLabel();
                     string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
                     if (files != null && files.Length > 0)
                     {

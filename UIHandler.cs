@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO;
 using System.Globalization;
+using System.Linq;
 
 namespace Filtr_czarno_biały
 {
@@ -29,7 +30,18 @@ namespace Filtr_czarno_biały
                 {
                     threadsComboBox.Items.Add(option.ToString());
                 }
-                threadsComboBox.SelectedItem = defaultThreadCount.ToString();
+
+                // Ustawiamy wartość domyślną na wykrytą liczbę procesorów
+                if (threadOptions.Contains(defaultThreadCount))
+                {
+                    threadsComboBox.SelectedItem = defaultThreadCount.ToString();
+                }
+                else
+                {
+                    // Jeśli wykryta liczba nie jest w opcjach, wybierz najbliższą mniejszą wartość
+                    var closestOption = threadOptions.Where(x => x <= defaultThreadCount).Max();
+                    threadsComboBox.SelectedItem = closestOption.ToString();
+                }
             }
             catch (Exception ex)
             {
