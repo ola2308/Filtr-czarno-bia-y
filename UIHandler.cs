@@ -56,7 +56,7 @@ namespace Filtr_czarno_biały
             var resultForm = new Form
             {
                 Text = "Wyniki testów wydajności",
-                Size = new Size(1200, 800),
+                Size = new Size(800, 600),
                 StartPosition = FormStartPosition.CenterParent
             };
 
@@ -174,48 +174,16 @@ namespace Filtr_czarno_biały
 
             try
             {
-                // Informacje o obrazie
-                stats.AppendLine("\nInformacje o obrazie:");
+                stats.AppendLine($"\nInformacje o obrazie:");
                 stats.AppendLine($"Rozmiar: {originalImage.Width}x{originalImage.Height} pikseli");
-                stats.AppendLine($"Liczba pikseli: {pixelCount:N0}");
-                stats.AppendLine($"Format: {originalImage.PixelFormat}");
-                stats.AppendLine($"Rozdzielczość: {originalImage.HorizontalResolution:F0}x{originalImage.VerticalResolution:F0} DPI");
-
-                // Analiza wyników wydajności
-                if (!string.IsNullOrEmpty(results))
-                {
-                    stats.AppendLine("\nPodsumowanie wydajności:");
-                    // Tu można dodać analizę wyników z parametru results
-                    // np. średnie czasy, przyspieszenie, etc.
-                }
-
-                return stats.ToString();
+                stats.AppendLine($"Liczba pikseli: {pixelCount}");
             }
             catch (Exception ex)
             {
                 return $"Błąd podczas generowania statystyk: {ex.Message}";
             }
-        }
 
-        private double ParseDoubleWithFallback(string value)
-        {
-            value = value.Trim();
-
-            // Próba parsowania z kropką
-            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
-            {
-                return result;
-            }
-
-            // Próba parsowania z przecinkiem
-            value = value.Replace(',', '.');
-            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out result))
-            {
-                return result;
-            }
-
-            // Jeśli nie udało się sparsować, zwróć 0
-            return 0;
+            return stats.ToString();
         }
     }
 }

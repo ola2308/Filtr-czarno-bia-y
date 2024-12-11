@@ -266,8 +266,8 @@ namespace Filtr_czarno_biały
 
                 var results = new StringBuilder();
                 results.AppendLine("Wyniki testów wydajności:");
-                results.AppendLine("Liczba wątków | Średni czas ASM (ms) | Min czas ASM (ms) | Max czas ASM (ms) | Średni czas C# (ms) | Min czas C# (ms) | Max czas C# (ms)");
-                results.AppendLine(new string('-', 120));
+                results.AppendLine("Liczba wątków | Średni czas ASM [ms] | Średni czas C# [ms]");
+                results.AppendLine(new string('-', 50));
 
                 float brightness = (brightnessTrackBar.Value + 100) / 200f;
 
@@ -299,21 +299,13 @@ namespace Filtr_czarno_biały
                     }
 
                     double avgTime = threadResults.Average(r => r.ExecutionTime);
-                    double minTime = threadResults.Min(r => r.ExecutionTime);
-                    double maxTime = threadResults.Max(r => r.ExecutionTime);
 
                     double csAvgTime = csTimes.Average();
-                    long csMinTime = csTimes.Min();
-                    long csMaxTime = csTimes.Max();
 
-                    results.AppendFormat("{0,12} | {1,18:F3} | {2,15:F3} | {3,15:F3} | {4,17:F3} | {5,14:F3} | {6,14:F3}",
+                    results.AppendFormat("{0,12} | {1,14:F3} | {2,13:F3}",
                         threadCount,
                         avgTime,
-                        minTime,
-                        maxTime,
-                        csAvgTime,
-                        csMinTime,
-                        csMaxTime);
+                        csAvgTime);
                     results.AppendLine();
 
                     benchmarkResults.Add(threadResults.OrderBy(r => r.ExecutionTime).First());
