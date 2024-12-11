@@ -1,127 +1,160 @@
 .data
     align 16
-    rgb_weights REAL4 0.299, 0.587, 0.114, 0.0   ; wagi RGB do konwersji na skalê szaroœci
-    rounding_const REAL4 0.5, 0.5, 0.5, 0.5       ; sta³a do zaokr¹glania
-    max_value REAL4 255.0, 255.0, 255.0, 255.0    ; maksymalna wartoœæ piksela
-    min_value REAL4 0.0, 0.0, 0.0, 0.0            ; minimalna wartoœæ piksela
+    rgb_weights REAL4 0.299, 0.587, 0.114, 0.0
+    rounding_const REAL4 0.5, 0.5, 0.5, 0.5
+    max_value REAL4 255.0, 255.0, 255.0, 255.0
+    min_value REAL4 0.0, 0.0, 0.0, 0.0
+    align 16
+    r_weight REAL4 0.299, 0.299, 0.299, 0.299
+    g_weight REAL4 0.587, 0.587, 0.587, 0.587
+    b_weight REAL4 0.114, 0.114, 0.114, 0.114
 
 .code
 GrayscaleFilter PROC
-    ; Parametry:
-    ; rcx - inputBuffer
-    ; rdx - outputBuffer
-    ; r8d - pixelCount
-    ; xmm3 - brightness (float)
-
     push rbp
     mov rbp, rsp
     push rsi
     push rdi
     push rbx
 
-    mov rsi, rcx        ; Ÿród³owy bufor
-    mov rdi, rdx        ; docelowy bufor
-    mov ebx, r8d        ; liczba pikseli
+    mov rsi, rcx      
+    mov rdi, rdx      
+    mov ebx, r8d     
 
-    ; Przygotowanie wag pomno¿onych przez jasnoœæ
-    movss xmm0, dword ptr [rgb_weights]      ; waga R (0.299)
-    mulss xmm0, xmm3                         ; mno¿ymy przez jasnoœæ
-    movss xmm4, xmm0                         ; zachowujemy wagê R
+    shufps xmm3, xmm3, 0    
 
-    movss xmm0, dword ptr [rgb_weights+4]    ; waga G (0.587)
-    mulss xmm0, xmm3                         ; mno¿ymy przez jasnoœæ
-    movss xmm5, xmm0                         ; zachowujemy wagê G
+    movaps xmm7, XMMWORD PTR [rounding_const]  
+    movaps xmm8, XMMWORD PTR [max_value]       
+    movaps xmm9, XMMWORD PTR [min_value]       
+    
+   
+    movaps xmm10, XMMWORD PTR [r_weight]      
+    movaps xmm11, XMMWORD PTR [g_weight]      
+    movaps xmm12, XMMWORD PTR [b_weight]       
+    
+    mulps xmm10, xmm3                         
+    mulps xmm11, xmm3
+    mulps xmm12, xmm3
 
-    movss xmm0, dword ptr [rgb_weights+8]    ; waga B (0.114)
-    mulss xmm0, xmm3                         ; mno¿ymy przez jasnoœæ
-    movss xmm6, xmm0                         ; zachowujemy wagê B
-
-    ; Przygotowanie licznika bloków 4-pikselowych
     mov ecx, ebx
-    shr ecx, 2                               ; dzielimy przez 4
+    shr ecx, 2         
     test ecx, ecx
-    jz process_remaining                     ; jeœli nie ma bloków 4-pikselowych, przechodzimy do pozosta³ych
+    jz process_remaining
 
 process_4_pixels:
-    push rcx                                 ; zapisujemy licznik g³ównej pêtli
-
-    ; Przetwarzamy 4 piksele w pêtli
-    mov ecx, 4                               ; licznik wewnêtrznej pêtli (4 piksele)
-pixel_loop:
-    ; Wczytujemy kolory w kolejnoœci BGR
-    movzx eax, byte ptr [rsi]               ; B
-    cvtsi2ss xmm1, eax                      ; konwertujemy na float
-    mulss xmm1, xmm6                        ; mno¿ymy przez wagê B
-
-    movzx eax, byte ptr [rsi+1]             ; G
+    movzx eax, byte ptr [rsi]     
+    cvtsi2ss xmm0, eax
+    movzx eax, byte ptr [rsi+3]
+    cvtsi2ss xmm1, eax
+    movzx eax, byte ptr [rsi+6] 
     cvtsi2ss xmm2, eax
-    mulss xmm2, xmm5                        ; mno¿ymy przez wagê G
-    addss xmm1, xmm2                        ; dodajemy do sumy
-
-    movzx eax, byte ptr [rsi+2]             ; R
-    cvtsi2ss xmm2, eax
-    mulss xmm2, xmm4                        ; mno¿ymy przez wagê R
-    addss xmm1, xmm2                        ; dodajemy do sumy
-
-    ; Zaokr¹glanie i kontrola zakresu
-    addss xmm1, dword ptr [rounding_const]  ; dodajemy 0.5 do zaokr¹glenia
-    maxss xmm1, dword ptr [min_value]       ; minimum 0
-    minss xmm1, dword ptr [max_value]       ; maximum 255
+    movzx eax, byte ptr [rsi+9]  
+    cvtsi2ss xmm4, eax
+    insertps xmm0, xmm1, 010h
+    insertps xmm0, xmm2, 020h
+    insertps xmm0, xmm4, 030h
     
-    ; Konwersja na byte
-    cvtss2si eax, xmm1                      ; konwertujemy float na int
+    mulps xmm0, xmm12 
 
-    ; Zapisujemy tê sam¹ wartoœæ dla BGR
-    mov byte ptr [rdi], al                  ; B
-    mov byte ptr [rdi+1], al                ; G
-    mov byte ptr [rdi+2], al                ; R
+    movzx eax, byte ptr [rsi+1] 
+    cvtsi2ss xmm1, eax
+    movzx eax, byte ptr [rsi+4] 
+    cvtsi2ss xmm2, eax
+    movzx eax, byte ptr [rsi+7]  
+    cvtsi2ss xmm4, eax
+    movzx eax, byte ptr [rsi+10]
+    cvtsi2ss xmm5, eax
+    insertps xmm1, xmm2, 010h
+    insertps xmm1, xmm4, 020h
+    insertps xmm1, xmm5, 030h
+    
+    mulps xmm1, xmm11             
+    addps xmm0, xmm1             
 
-    ; Przesuwamy wskaŸniki na nastêpny piksel
-    add rsi, 3
-    add rdi, 3
+   
+    movzx eax, byte ptr [rsi+2]
+    cvtsi2ss xmm1, eax
+    movzx eax, byte ptr [rsi+5] 
+    cvtsi2ss xmm2, eax
+    movzx eax, byte ptr [rsi+8]  
+    cvtsi2ss xmm4, eax
+    movzx eax, byte ptr [rsi+11]  
+    cvtsi2ss xmm5, eax
+    insertps xmm1, xmm2, 010h
+    insertps xmm1, xmm4, 020h
+    insertps xmm1, xmm5, 030h
+    
+    mulps xmm1, xmm10      
+    addps xmm0, xmm1     
 
-    dec ecx                                 ; zmniejszamy licznik pikseli
-    jnz pixel_loop                          ; jeœli nie zero, kontynuujemy pêtlê
+    addps xmm0, xmm7              
+    maxps xmm0, xmm9              
+    minps xmm0, xmm8            
 
-    pop rcx                                 ; przywracamy licznik g³ównej pêtli
-    dec ecx                                 ; zmniejszamy licznik bloków
-    jnz process_4_pixels                    ; jeœli nie zero, przetwarzamy nastêpny blok
+   
+    cvtss2si eax, xmm0
+    mov byte ptr [rdi], al
+    mov byte ptr [rdi+1], al
+    mov byte ptr [rdi+2], al
+    
+    psrldq xmm0, 4
+    cvtss2si eax, xmm0
+    mov byte ptr [rdi+3], al
+    mov byte ptr [rdi+4], al
+    mov byte ptr [rdi+5], al
+    
+    psrldq xmm0, 4
+    cvtss2si eax, xmm0
+    mov byte ptr [rdi+6], al
+    mov byte ptr [rdi+7], al
+    mov byte ptr [rdi+8], al
+    
+    psrldq xmm0, 4
+    cvtss2si eax, xmm0
+    mov byte ptr [rdi+9], al
+    mov byte ptr [rdi+10], al
+    mov byte ptr [rdi+11], al
+
+    add rsi, 12                   
+    add rdi, 12
+    dec ecx
+    jnz process_4_pixels
 
 process_remaining:
-    ; Sprawdzamy czy zosta³y jakieœ piksele
-    and ebx, 3                              ; ebx mod 4
-    jz cleanup                              ; jeœli nie ma pozosta³ych pikseli, koñczymy
+    and ebx, 3                    
+    jz cleanup
 
-    ; Przetwarzamy pozosta³e piksele
-remaining_loop:
-    ; Ten sam kod co dla pojedynczego piksela wy¿ej
-    movzx eax, byte ptr [rsi]               ; B
+    movss xmm6, xmm3
+
+remaining_loop:             
+    movzx eax, byte ptr [rsi]; B
     cvtsi2ss xmm1, eax
-    mulss xmm1, xmm6
-
-    movzx eax, byte ptr [rsi+1]             ; G
+    mulss xmm1, dword ptr [b_weight]
+    mulss xmm1, xmm6              
+    
+    movzx eax, byte ptr [rsi+1]; G
     cvtsi2ss xmm2, eax
-    mulss xmm2, xmm5
+    mulss xmm2, dword ptr [g_weight]
+    mulss xmm2, xmm6         
     addss xmm1, xmm2
-
-    movzx eax, byte ptr [rsi+2]             ; R
+    
+    movzx eax, byte ptr [rsi+2]; R
     cvtsi2ss xmm2, eax
-    mulss xmm2, xmm4
+    mulss xmm2, dword ptr [r_weight]
+    mulss xmm2, xmm6       
     addss xmm1, xmm2
-
+    
     addss xmm1, dword ptr [rounding_const]
     maxss xmm1, dword ptr [min_value]
     minss xmm1, dword ptr [max_value]
     
     cvtss2si eax, xmm1
-
-    mov byte ptr [rdi], al                  ; B
-    mov byte ptr [rdi+1], al                ; G
-    mov byte ptr [rdi+2], al                ; R
-
+    mov byte ptr [rdi], al
+    mov byte ptr [rdi+1], al
+    mov byte ptr [rdi+2], al
+    
     add rsi, 3
     add rdi, 3
-
     dec ebx
     jnz remaining_loop
 
@@ -131,6 +164,5 @@ cleanup:
     pop rsi
     pop rbp
     ret
-
 GrayscaleFilter ENDP
 END
