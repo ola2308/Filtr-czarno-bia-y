@@ -19,7 +19,8 @@ namespace Filtr_czarno_biały
         private RadioButton asmRadioButton;
         private RadioButton csRadioButton;
         private Label threadLabel;
-        private ComboBox threadsComboBox;
+        private TrackBar threadsTrackBar;  // Zmienione z ComboBox na TrackBar
+        private Label threadCountLabel;     // Nowy Label do wyświetlania liczby wątków
         private Label brightnessLabel;
         private TrackBar brightnessTrackBar;
         private Button processButton;
@@ -114,12 +115,12 @@ namespace Filtr_czarno_biały
                 {
                     Dock = DockStyle.Fill,
                     ColumnCount = 1,
-                    RowCount = 11,
+                    RowCount = 12,  // Zwiększono o 1 dla nowego Label
                     Padding = new Padding(5),
                     BackColor = Color.White
                 };
 
-                for (int i = 0; i < 11; i++)
+                for (int i = 0; i < 12; i++)
                 {
                     controlPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
                 }
@@ -182,13 +183,26 @@ namespace Filtr_czarno_biały
                     Font = new Font("Segoe UI", 9F, FontStyle.Regular)
                 };
 
-                // ComboBox wątków
-                threadsComboBox = new ComboBox
+                // TrackBar liczby wątków
+                threadsTrackBar = new TrackBar
                 {
                     Dock = DockStyle.Fill,
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    Margin = new Padding(3, 3, 3, 10),
-                    Font = new Font("Segoe UI", 9F, FontStyle.Regular)
+                    Minimum = 1,     // Minimum 1 wątek
+                    Maximum = 64,    // Maximum 64 wątki
+                    TickStyle = TickStyle.Both,
+                    TickFrequency = 4,  // Znaczniki co 4 wątki
+                    Margin = new Padding(3, 3, 3, 10)
+                };
+                threadsTrackBar.ValueChanged += new EventHandler(ThreadsTrackBar_ValueChanged);
+
+                // Label wyświetlający aktualną liczbę wątków
+                threadCountLabel = new Label
+                {
+                    Text = "4 wątki",
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                    Margin = new Padding(3, 3, 3, 10)
                 };
 
                 // Etykieta jasności
@@ -279,14 +293,15 @@ namespace Filtr_czarno_biały
                 controlPanel.Controls.Add(loadButton, 0, 0);
                 controlPanel.Controls.Add(libraryGroupBox, 0, 1);
                 controlPanel.Controls.Add(threadLabel, 0, 2);
-                controlPanel.Controls.Add(threadsComboBox, 0, 3);
-                controlPanel.Controls.Add(brightnessLabel, 0, 4);
-                controlPanel.Controls.Add(brightnessTrackBar, 0, 5);
-                controlPanel.Controls.Add(processButton, 0, 6);
-                controlPanel.Controls.Add(saveButton, 0, 7);
-                controlPanel.Controls.Add(progressBar, 0, 8);
-                controlPanel.Controls.Add(executionTimeLabel, 0, 9);
-                controlPanel.Controls.Add(statusLabel, 0, 10);
+                controlPanel.Controls.Add(threadsTrackBar, 0, 3);
+                controlPanel.Controls.Add(threadCountLabel, 0, 4);
+                controlPanel.Controls.Add(brightnessLabel, 0, 5);
+                controlPanel.Controls.Add(brightnessTrackBar, 0, 6);
+                controlPanel.Controls.Add(processButton, 0, 7);
+                controlPanel.Controls.Add(saveButton, 0, 8);
+                controlPanel.Controls.Add(progressBar, 0, 9);
+                controlPanel.Controls.Add(executionTimeLabel, 0, 10);
+                controlPanel.Controls.Add(statusLabel, 0, 11);
 
                 // Składanie głównego układu
                 mainLayout.Controls.Add(imagePanel, 0, 0);

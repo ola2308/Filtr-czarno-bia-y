@@ -14,7 +14,6 @@ namespace Filtr_czarno_biały
 {
     public partial class MainForm : Form
     {
-        private const int DEFAULT_THREAD_COUNT = 4;
         private Bitmap originalImage;
         private Bitmap processedImage;
         private byte[] inputBuffer;
@@ -37,8 +36,8 @@ namespace Filtr_czarno_biały
             benchmarkResults = new List<ProcessingResult>();
             imageProcessor = new ImageProcessor();
 
-            // Zamiast stałej DEFAULT_THREAD_COUNT używamy wykrytej liczby procesorów
-            uiHandler.InitializeThreadComboBox(threadsComboBox, GetDefaultThreadCount());
+            // Inicjalizacja suwaka liczby wątków z domyślną wartością
+            uiHandler.InitializeThreadTrackBar(threadsTrackBar, GetDefaultThreadCount());
 
             asmRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
             csRadioButton.CheckedChanged += LibraryRadioButton_CheckedChanged;
@@ -46,8 +45,20 @@ namespace Filtr_czarno_biały
 
         private int GetDefaultThreadCount()
         {
-            return Environment.ProcessorCount; // Automatycznie wykrywa liczbę procesorów logicznych
+            return Environment.ProcessorCount;
         }
+
+        private void ThreadsTrackBar_ValueChanged(object sender, EventArgs e)
+        {
+            int threadCount = threadsTrackBar.Value;
+            threadCountLabel.Text = $"{threadCount} wątków";
+
+            if (originalImage != null)
+            {
+                ProcessImageAsync().ConfigureAwait(false);
+            }
+        }
+
         private void InitializeDropLabel()
         {
             dragLabel = new Label
@@ -216,7 +227,6 @@ namespace Filtr_czarno_biały
                 statusLabel.Text = $"Status: Obraz wczytany ({originalImage.Width}x{originalImage.Height})";
                 SetControlsEnabled(true);
 
-                // Ukryj napis po wczytaniu obrazu
                 if (dragDropLabel != null && !dragDropLabel.IsDisposed)
                 {
                     dragDropLabel.Visible = false;
@@ -262,6 +272,7 @@ namespace Filtr_czarno_biały
                 SetControlsEnabled(false);
                 benchmarkResults.Clear();
 
+                // Tylko potęgi 2 do testów wydajności
                 int[] threadCounts = { 1, 2, 4, 8, 16, 32, 64 };
                 int totalTests = threadCounts.Length * 5;
                 int currentTest = 0;
@@ -270,7 +281,7 @@ namespace Filtr_czarno_biały
                 progressBar.Value = 0;
 
                 var results = new StringBuilder();
-                results.AppendLine("Wyniki testów wydajności:");
+                results.AppendLine("Wyniki testów wydajności (potęgi 2):");
                 results.AppendLine("Liczba wątków | Średni czas ASM [ms] | Średni czas C# [ms]");
                 results.AppendLine(new string('-', 50));
 
@@ -304,7 +315,6 @@ namespace Filtr_czarno_biały
                     }
 
                     double avgTime = threadResults.Average(r => r.ExecutionTime);
-
                     double csAvgTime = csTimes.Average();
 
                     results.AppendFormat("{0,12} | {1,14:F3} | {2,13:F3}",
@@ -416,7 +426,7 @@ namespace Filtr_czarno_biały
 
             try
             {
-                int threadCount = int.Parse(threadsComboBox.SelectedItem.ToString());
+                int threadCount = threadsTrackBar.Value; // Bezpośrednio używamy wartości z suwaka
                 float brightness = (brightnessTrackBar.Value + 100) / 200f;
 
                 ProcessingResult result;
@@ -439,20 +449,21 @@ namespace Filtr_czarno_biały
                     result = new ProcessingResult
                     {
                         ExecutionTime = watch.ElapsedMilliseconds,
-                        ThreadCount = 1,
+                        ThreadCount = threadCount,
                         OutputBuffer = outputBuffer,
                         ProcessingDetails = new ProcessingDetails
                         {
-                            PixelsPerThread = pixelCount,
-                            TotalThreads = 1,
+                            PixelsPerThread = pixelCount / threadCount,
+                            TotalThreads = threadCount,
                             PixelsPerMillisecond = pixelCount / (float)watch.ElapsedMilliseconds
                         }
                     };
                 }
-
                 processedImage = CreateBitmapFromBuffer(result.OutputBuffer, originalImage.Width, originalImage.Height);
                 processedPictureBox.Image = processedImage;
-                executionTimeLabel.Text = $"Czas wykonania: {result.ExecutionTime}ms\n" +
+
+                // Aktualizacja informacji o czasie wykonania dla bieżącej liczby wątków
+                executionTimeLabel.Text = $"Czas wykonania ({threadCount} wątków): {result.ExecutionTime}ms\n" +
                                         $"Wydajność: {result.ProcessingDetails.PixelsPerMillisecond:F2} pikseli/ms";
             }
             catch (Exception ex)
@@ -462,16 +473,6 @@ namespace Filtr_czarno_biały
                               MessageBoxButtons.OK,
                               MessageBoxIcon.Error);
             }
-        }
-
-        private void ShowResults(string results)
-        {
-            uiHandler.ShowResults(results, originalImage, pixelCount, inputBuffer);
-        }
-
-        private void SetControlsEnabled(bool enabled)
-        {
-            uiHandler.SetControlsEnabled(new Control[] { threadsComboBox, brightnessTrackBar, processButton, saveButton }, enabled);
         }
 
         private Bitmap CreateBitmapFromBuffer(byte[] buffer, int width, int height)
@@ -496,6 +497,22 @@ namespace Filtr_czarno_biały
             {
                 bitmap.UnlockBits(bmpData);
             }
+        }
+
+        private void ShowResults(string results)
+        {
+            uiHandler.ShowResults(results, originalImage, pixelCount, inputBuffer);
+        }
+
+        private void SetControlsEnabled(bool enabled)
+        {
+            uiHandler.SetControlsEnabled(new Control[]
+            {
+                threadsTrackBar,
+                brightnessTrackBar,
+                processButton,
+                saveButton
+            }, enabled);
         }
     }
 }

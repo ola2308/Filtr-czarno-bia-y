@@ -11,10 +11,5 @@ namespace Filtr_czarno_biały
             [Out] byte[] outputBuffer,
             int pixelCount,
             float brightness = 1.0f);
-
-        // Stałe dla operacji SIMD
-        public const int BytesPerPixel = 3;      // Format RGB
-        public const int SIMDAlignment = 64;     // Wyrównanie dla operacji SIMD
-        public const int PixelsPerBlock = 8;     // Liczba pikseli przetwarzanych w jednym bloku SIMD
     }
 }

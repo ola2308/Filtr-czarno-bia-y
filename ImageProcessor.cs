@@ -9,19 +9,19 @@ namespace Filtr_czarno_biały
     public class ImageProcessor
     {
         public async Task<ProcessingResult> ProcessImageWithParamsAsync(
-    byte[] inputBuffer,
-    int threadCount,
-    float brightness,
-    int pixelCount,
-    bool useASM = true)
+            byte[] inputBuffer,
+            int threadCount,
+            float brightness,
+            int pixelCount,
+            bool useASM = true)
         {
             return await Task.Run(() =>
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
 
-                // Upewnij się, że liczba pikseli na wątek jest wielokrotnością 4
+                // Oblicz liczbę pikseli na wątek
                 int pixelsPerThread = pixelCount / threadCount;
-                pixelsPerThread = (pixelsPerThread + 3) & ~3; // Zaokrąglij w górę do wielokrotności 4
+                int remainingPixels = pixelCount % threadCount; // Pozostałe piksele dla ostatniego wątku
 
                 byte[] outputBuffer = new byte[inputBuffer.Length];
                 var tasks = new Task[threadCount];
@@ -31,32 +31,22 @@ namespace Filtr_czarno_biały
                     int threadIndex = i;
                     int startPixel = threadIndex * pixelsPerThread;
 
-                    // Oblicz faktyczną liczbę pikseli dla tego wątku
-                    int pixelsToProcess;
-                    if (threadIndex == threadCount - 1)
-                    {
-                        // Ostatni wątek bierze wszystkie pozostałe piksele
-                        pixelsToProcess = pixelCount - startPixel;
-                        // Zaokrąglij w górę do wielokrotności 4
-                        pixelsToProcess = (pixelsToProcess + 3) & ~3;
-                    }
-                    else
-                    {
-                        pixelsToProcess = pixelsPerThread;
-                    }
-
-                    // Sprawdź czy nie wyjdziemy poza bufor
-                    if (startPixel + pixelsToProcess > pixelCount)
-                    {
-                        pixelsToProcess = pixelCount - startPixel;
-                    }
+                    // Ostatni wątek przetwarza wszystkie pozostałe piksele
+                    int pixelsToProcess = (threadIndex == threadCount - 1)
+                        ? pixelsPerThread + remainingPixels
+                        : pixelsPerThread;
 
                     tasks[i] = Task.Run(() =>
                     {
                         int startOffset = startPixel * 3;
                         int length = pixelsToProcess * 3;
 
-                        // Stwórz bufory tymczasowe z wyrównaniem
+                        if (length <= 0 || length > int.MaxValue / 3)
+                        {
+                            throw new ArgumentException("Nieprawidłowy rozmiar bufora");
+                        }
+
+                        // Stwórz bufory tymczasowe
                         byte[] threadInput = new byte[length];
                         byte[] threadOutput = new byte[length];
 

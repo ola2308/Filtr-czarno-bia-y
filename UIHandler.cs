@@ -17,35 +17,20 @@ namespace Filtr_czarno_biały
             this.mainForm = form;
         }
 
-        public void InitializeThreadComboBox(ComboBox threadsComboBox, int defaultThreadCount)
+        public void InitializeThreadTrackBar(TrackBar threadsTrackBar, int defaultThreadCount)
         {
-            if (threadsComboBox == null)
+            if (threadsTrackBar == null)
                 return;
 
             try
             {
-                int[] threadOptions = { 1, 2, 4, 8, 16, 32, 64 };
-                threadsComboBox.Items.Clear();
-                foreach (int option in threadOptions)
-                {
-                    threadsComboBox.Items.Add(option.ToString());
-                }
-
-                // Ustawiamy wartość domyślną na wykrytą liczbę procesorów
-                if (threadOptions.Contains(defaultThreadCount))
-                {
-                    threadsComboBox.SelectedItem = defaultThreadCount.ToString();
-                }
-                else
-                {
-                    // Jeśli wykryta liczba nie jest w opcjach, wybierz najbliższą mniejszą wartość
-                    var closestOption = threadOptions.Where(x => x <= defaultThreadCount).Max();
-                    threadsComboBox.SelectedItem = closestOption.ToString();
-                }
+                // Ograniczamy domyślną liczbę wątków do zakresu TrackBara
+                int initialValue = Math.Min(Math.Max(defaultThreadCount, threadsTrackBar.Minimum), threadsTrackBar.Maximum);
+                threadsTrackBar.Value = initialValue;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Błąd podczas inicjalizacji ComboBox: {ex.Message}",
+                MessageBox.Show($"Błąd podczas inicjalizacji TrackBar: {ex.Message}",
                               "Błąd",
                               MessageBoxButtons.OK,
                               MessageBoxIcon.Warning);
@@ -147,8 +132,22 @@ namespace Filtr_czarno_biały
                     {
                         try
                         {
-                            File.WriteAllText(saveDialog.FileName,
-                                results + "\n\nStatystyki:\n" + statsTextBox.Text);
+                            StringBuilder fullResults = new StringBuilder();
+                            fullResults.AppendLine("WYNIKI TESTÓW WYDAJNOŚCI");
+                            fullResults.AppendLine("=======================");
+                            fullResults.AppendLine();
+                            fullResults.AppendLine("Parametry obrazu:");
+                            fullResults.AppendLine($"- Wymiary: {originalImage.Width}x{originalImage.Height}");
+                            fullResults.AppendLine($"- Liczba pikseli: {pixelCount:N0}");
+                            fullResults.AppendLine();
+                            fullResults.AppendLine("Szczegółowe wyniki:");
+                            fullResults.AppendLine(results);
+                            fullResults.AppendLine();
+                            fullResults.AppendLine("Statystyki:");
+                            fullResults.AppendLine(statsTextBox.Text);
+
+                            File.WriteAllText(saveDialog.FileName, fullResults.ToString());
+
                             MessageBox.Show("Wyniki zostały zapisane pomyślnie!",
                                           "Sukces",
                                           MessageBoxButtons.OK,
@@ -182,13 +181,13 @@ namespace Filtr_czarno_biały
         {
             var stats = new StringBuilder();
             stats.AppendLine("Analiza statystyczna:");
-            stats.AppendLine("--------------------");
+            stats.AppendLine("====================");
 
             try
             {
-                stats.AppendLine($"\nInformacje o obrazie:");
+                stats.AppendLine("\nInformacje o obrazie:");
                 stats.AppendLine($"Rozmiar: {originalImage.Width}x{originalImage.Height} pikseli");
-                stats.AppendLine($"Liczba pikseli: {pixelCount}");
+                stats.AppendLine($"Liczba pikseli: {pixelCount:N0}");
             }
             catch (Exception ex)
             {
