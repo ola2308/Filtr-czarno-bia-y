@@ -8,19 +8,16 @@ namespace BibliotekaCS1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GrayscaleFilter(byte[] inputBuffer, byte[] outputBuffer, int pixelCount, float brightness)
         {
-            // Wagi dla przekształcenia RGB na skalę szarości
             float weightR = 0.299f * brightness;
             float weightG = 0.587f * brightness;
             float weightB = 0.114f * brightness;
 
-            // Przetwarzanie 4 pikseli na raz
-            int blocksOf4 = pixelCount >> 2;  // dzielenie przez 4
+            int blocksOf4 = pixelCount >> 2;
 
             for (int block = 0; block < blocksOf4; block++)
             {
-                int baseOffset = block * 12;  // 4 piksele * 3 bajty
+                int baseOffset = block * 12;
 
-                // Przetwarzanie 4 pikseli jednocześnie
                 for (int j = 0; j < 12; j += 3)
                 {
                     int offset = baseOffset + j;
@@ -28,17 +25,20 @@ namespace BibliotekaCS1
                     byte g = inputBuffer[offset + 1];
                     byte r = inputBuffer[offset + 2];
 
-                    // Obliczanie wartości szarości
-                    byte gray = (byte)(r * weightR + g * weightG + b * weightB);
+                    float grayValue = r * weightR + g * weightG + b * weightB + 0.5f;
 
-                    // Zapisanie wartości do bufora wyjściowego
+                    if (grayValue < 0f) grayValue = 0f;
+                    else if (grayValue > 255f) grayValue = 255f;
+
+                    byte gray = (byte)grayValue;
+
                     outputBuffer[offset] = gray;
                     outputBuffer[offset + 1] = gray;
                     outputBuffer[offset + 2] = gray;
                 }
             }
 
-            // Przetwarzanie pozostałych pikseli
+            // Pozostałe piksele
             int remainingOffset = blocksOf4 * 12;
             for (int i = remainingOffset; i < pixelCount * 3; i += 3)
             {
@@ -46,10 +46,13 @@ namespace BibliotekaCS1
                 byte g = inputBuffer[i + 1];
                 byte r = inputBuffer[i + 2];
 
-                // Obliczanie wartości szarości
-                byte gray = (byte)(r * weightR + g * weightG + b * weightB);
+                float grayValue = r * weightR + g * weightG + b * weightB + 0.5f;
 
-                // Zapisanie wartości do bufora wyjściowego
+                if (grayValue < 0f) grayValue = 0f;
+                else if (grayValue > 255f) grayValue = 255f;
+
+                byte gray = (byte)grayValue;
+
                 outputBuffer[i] = gray;
                 outputBuffer[i + 1] = gray;
                 outputBuffer[i + 2] = gray;
